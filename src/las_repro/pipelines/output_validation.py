@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 import math
 from collections.abc import Callable, Mapping
@@ -10,7 +11,14 @@ from typing import Any
 
 from pydantic import BaseModel, ValidationError
 
+from ..models.response_contract import (
+    BOUNDARY_CONTRACT, ModelResponseContract, canonical, compile_local_schema,
+    preflight_plain,
+)
+from ..cv.summary import OcclusionCandidate
+from .occlusion import OcclusionDecisionSet, validate_occlusion_decisions
 from .scene_semantics import SceneSemantics, validate_scene_semantics
+from .scene_choices import CHOICE_CODES, validate_scene_choices, scene_response_contract
 from .validators import (
     BoundaryPlan,
     CoarsePlan,
@@ -54,18 +62,30 @@ _SCHEMA_ERROR_SUFFIX_BY_ERROR_TYPE = (
     ("greater_than_equal", "NUMBER_RANGE"),
     ("less_than_equal", "NUMBER_RANGE"),
     ("enum", "ENUM_VALUE"),
+    ("literal_error", "ENUM_VALUE"),
     ("value_error", "BLANK_STRING"),
 )
 
 _COARSE_TEMPORAL_CODES = (
     "EMPTY_ACTIONS",
-    "ACTION_START_NOT_ZERO",
     "DUPLICATE_ACTION_INDEX",
     "ACTION_INDEX_NOT_ORDERED",
     "ACTION_NONPOSITIVE_DURATION",
-    "ACTION_GAP",
+    "ACTION_OUTSIDE_VIDEO",
     "ACTION_OVERLAP",
-    "ACTION_END_MISMATCH_DURATION",
+    "EMPTY_ENTITY_CANDIDATES",
+)
+_COARSE_ENTITY_SCHEMA_CODES = (
+    "COARSE_PLAN_ENTITY_CANDIDATE_LIMIT",
+    "COARSE_PLAN_ENTITY_BLANK_STRING",
+    "COARSE_PLAN_ENTITY_UNKNOWN_NAME",
+    "COARSE_PLAN_ENTITY_ALIAS_DUPLICATE",
+    "COARSE_PLAN_ENTITY_ROLE_INVALID",
+    "COARSE_PLAN_ENTITY_EXTRA_FIELD",
+)
+_COARSE_ENTITY_FIELDS = frozenset({"name", "aliases", "role"})
+_COARSE_ENTITY_ROLES = frozenset(
+    {"actor", "manipulated_object", "container", "occluder", "surface", "other"}
 )
 _BOUNDARY_TEMPORAL_CODES = (
     "TASK_DESCRIPTION_MISMATCH",
@@ -73,7 +93,6 @@ _BOUNDARY_TEMPORAL_CODES = (
     "DUPLICATE_ACTION_INDEX",
     "ACTION_INDEX_NOT_ORDERED",
     "ACTION_NONPOSITIVE_DURATION",
-    "ACTION_GAP",
     "ACTION_OVERLAP",
     "UNKNOWN_COARSE_ACTION",
     "PARENT_START_MISMATCH",
@@ -111,6 +130,17 @@ _ENRICHMENT_TEMPORAL_CODES = (
     "UNEXPECTED_ENRICHMENT_INDEX",
 )
 _SCENE_TEMPORAL_CODES = (
+    "SCENE_SPATIAL_INVALID",
+    "SCENE_SPATIAL_EVIDENCE_UNAVAILABLE",
+    "SCENE_SPATIAL_TIME_BOUNDS_INVALID",
+    "SCENE_SPATIAL_OBJECT_REFERENCE_INVALID",
+    "SCENE_SPATIAL_ORDER_INVALID",
+    "SCENE_SPATIAL_TIME_NOT_OBSERVED",
+    "SCENE_SPATIAL_SOURCE_SEGMENTS_INVALID",
+    "SCENE_SPATIAL_TRACKS_INVALID",
+    "SCENE_SPATIAL_KEYFRAMES_INVALID",
+    "SCENE_SPATIAL_PROVENANCE_INVALID",
+    "SCENE_SPATIAL_PROHIBITED_CONTENT",
     "EMPTY_SCENE_OBJECTS",
     "EMPTY_SCENE_EVENTS",
     "SCENE_REQUIRED_OBJECT_MISSING",
@@ -122,6 +152,20 @@ _SCENE_TEMPORAL_CODES = (
     "SCENE_EVENT_OUTSIDE_VIDEO",
     "SCENE_EVENT_START_NOT_ORDERED",
     "SCENE_EVENT_UNKNOWN_OBJECT",
+)
+_OCCLUSION_TEMPORAL_CODES = (
+    "OCCLUSION_DECISION_CARDINALITY",
+    "OCCLUSION_CANDIDATE_ORDER",
+    "OCCLUSION_TARGET_MISMATCH",
+    "OCCLUSION_OCCLUDER_NOT_PROPOSED",
+    "OCCLUSION_EVIDENCE_PROHIBITED_CONTENT",
+    "NON_OCCLUSION_HAS_EVENTS",
+    "OCCLUSION_EVENTS_EMPTY",
+    "OCCLUSION_EVENTS_NOT_ORDERED",
+    "OCCLUSION_INTERVAL_NOT_ALLOWED",
+    "OCCLUSION_EVENT_NONPOSITIVE_DURATION",
+    "OCCLUSION_EVENT_OUTSIDE_VIDEO",
+    "OCCLUSION_EVENT_OVERLAP",
 )
 _ENRICHMENT_ENUM_FIELDS = (
     "actor",
@@ -135,6 +179,27 @@ _ENRICHMENT_ENUM_FIELD_CODES = {
     "skill": "ENRICHMENT_RESULT_SKILL_ENUM_VALUE",
     "visual_motion_state": "ENRICHMENT_RESULT_VISUAL_MOTION_STATE_ENUM_VALUE",
 }
+# Match only the known Pydantic kind and complete schema path shape.
+# None marks a nonnegative list index; no path or raw input enters feedback.
+_SCENE_CHOICE_ENUM_FIELDS = (
+    ("enum", ("semantic_events", None, "event_type"), "EVENT_TYPE"),
+    ("enum", ("semantic_events", None, "actor"), "ACTOR"),
+    ("enum", ("outcome", "status"), "OUTCOME_STATUS"),
+    ("literal_error", ("relations", None, "direction"), "RELATION_DIRECTION"),
+    ("literal_error", ("relations", None, "relation"), "RELATION_PREDICATE"),
+)
+_SCENE_CHOICE_ENUM_CODES = tuple(
+    f"SCENE_SEMANTICS_CHOICES_{suffix}_ENUM_VALUE"
+    for _, _, suffix in _SCENE_CHOICE_ENUM_FIELDS
+)
+_BOUNDARY_ENUM_FIELDS = (
+    ("enum", ("actions", None, "event_type"), "ACTION_EVENT_TYPE"),
+    ("enum", ("actions", None, "boundary_points", None, "event_type"), "BOUNDARY_POINT_EVENT_TYPE"),
+    ("enum", ("actions", None, "fine_segments", None, "event_type"), "FINE_SEGMENT_EVENT_TYPE"),
+)
+_BOUNDARY_ENUM_CODES = tuple(
+    f"BOUNDARY_PLAN_{suffix}_ENUM_VALUE" for _, _, suffix in _BOUNDARY_ENUM_FIELDS
+)
 _BOUNDARY_NORMALIZABLE_CODES = (
     "SEGMENT_TOO_LONG",
     "SEGMENT_BOUNDARY_NOT_ADJACENT",
@@ -179,6 +244,7 @@ class _SchemaEntry:
     allowed_issue_codes: tuple[str, ...]
     generic_issue_code: str
     preserve_issue_code_order: bool
+    response_contract_factory: Callable | None = None
 
 
 class OutputSchemaRegistry:
@@ -200,6 +266,7 @@ class OutputSchemaRegistry:
         allowed_issue_codes: tuple[str, ...],
         generic_issue_code: str,
         preserve_issue_code_order: bool = False,
+        response_contract_factory: Callable | None = None,
     ) -> None:
         if not isinstance(schema_name, str) or not schema_name.strip():
             raise ValueError("schema_name must be a non-blank string")
@@ -224,7 +291,15 @@ class OutputSchemaRegistry:
             allowed_issue_codes=allowed_issue_codes,
             generic_issue_code=generic_issue_code,
             preserve_issue_code_order=preserve_issue_code_order,
+            response_contract_factory=response_contract_factory,
         )
+
+    def model_response_contract(self, schema_name, authenticated_context):
+        """Compile only the registered server-owned scene response contract."""
+        entry = self._entries.get(schema_name)
+        if entry is None or entry.response_contract_factory is None:
+            return None
+        return entry.response_contract_factory(authenticated_context)
 
     def sanitize(
         self,
@@ -291,6 +366,10 @@ class OutputSchemaRegistry:
                 result,
                 validation_context,
             )
+        if schema_name == "SceneSemanticsChoices":
+            return _normalized_scene_envelope(result, validation_context)
+        if schema_name == "OcclusionDecisionSet":
+            return _normalized_occlusion_envelope(result, validation_context)
         if schema_name != "EnrichmentResult":
             return None
         try:
@@ -410,6 +489,132 @@ class OutputSchemaRegistry:
         }
 
 
+def _normalized_scene_envelope(
+    result: Mapping[str, Any],
+    validation_context: Mapping[str, Any] | None,
+) -> NormalizedSchemaOutput | None:
+    """Revalidate an exact mechanics-only SceneSemanticsChoices normalization."""
+    from .scene_choices import (
+        SCENE_NORMALIZATION_CODES, normalize_scene_choice_mechanics,
+        project_scene_choices, SceneSemanticsChoices,
+    )
+    try:
+        if set(result) != {SCHEMA_VALIDATION_FIELD, "data"}:
+            return None
+        envelope = result.get(SCHEMA_VALIDATION_FIELD)
+        data = result.get("data")
+        if not isinstance(envelope, Mapping) or set(envelope) != {
+            "schema_name",
+            "status",
+            "issue_codes",
+            "normalized_field_count",
+        }:
+            return None
+        codes = envelope.get("issue_codes")
+        count = envelope.get("normalized_field_count")
+        if (
+            envelope.get("schema_name") != "SceneSemanticsChoices"
+            or envelope.get("status") != "normalized"
+            or not isinstance(codes, list)
+            or not codes
+            or codes != [code for code in SCENE_NORMALIZATION_CODES if code in codes]
+            or isinstance(count, bool)
+            or not isinstance(count, int)
+            or count <= 0
+            or not isinstance(data, Mapping)
+        ):
+            return None
+        if (
+            not isinstance(validation_context, Mapping)
+            or validation_context.get("allow_scene_normalization") is not True
+        ):
+            return None
+        strict_context = {
+            k: v
+            for k, v in validation_context.items()
+            if k != "allow_scene_normalization"
+        }
+        from .scene_choices import _offered_option_ids
+        fixed, refix_codes, _ = normalize_scene_choice_mechanics(
+            data, _offered_option_ids(dict(strict_context))
+        )
+        if refix_codes:
+            return None
+        project_scene_choices(data, strict_context)
+        canonical = SceneSemanticsChoices.model_validate(data).model_dump(mode="json")
+        return NormalizedSchemaOutput(
+            data=canonical,
+            issue_codes=tuple(codes),
+            normalized_field_count=count,
+        )
+    except Exception:
+        return None
+
+
+def _normalized_occlusion_envelope(
+    result: Mapping[str, Any],
+    validation_context: Mapping[str, Any] | None,
+) -> NormalizedSchemaOutput | None:
+    """Revalidate an exact occluder-only OcclusionDecisionSet normalization."""
+    try:
+        if set(result) != {SCHEMA_VALIDATION_FIELD, "data"}:
+            return None
+        envelope = result.get(SCHEMA_VALIDATION_FIELD)
+        data = result.get("data")
+        if not isinstance(envelope, Mapping) or set(envelope) != {
+            "schema_name",
+            "status",
+            "issue_codes",
+            "normalized_field_count",
+        }:
+            return None
+        codes = envelope.get("issue_codes")
+        count = envelope.get("normalized_field_count")
+        if (
+            envelope.get("schema_name") != "OcclusionDecisionSet"
+            or envelope.get("status") != "normalized"
+            or codes not in (
+                ["OCCLUSION_OCCLUDER_NOT_PROPOSED"],
+                ["OCCLUSION_BOUNDARIES_COMPLETED"],
+                ["OCCLUSION_EVENTS_NOT_ORDERED"],
+            )
+            or isinstance(count, bool)
+            or not isinstance(count, int)
+            or count <= 0
+            or not isinstance(data, Mapping)
+        ):
+            return None
+        if (
+            not isinstance(validation_context, Mapping)
+            or validation_context.get("allow_occluder_unknown_fallback") is not True
+        ):
+            return None
+        strict_context = {
+            k: v
+            for k, v in validation_context.items()
+            if k != "allow_occluder_unknown_fallback"
+        }
+        canonical = _validate_occlusion_decision_output(data, strict_context)
+        if not isinstance(canonical, dict):
+            return None
+        if codes == ["OCCLUSION_OCCLUDER_NOT_PROPOSED"]:
+            unknowns = sum(
+                1
+                for decision in canonical.get("decisions", ())
+                if isinstance(decision, Mapping)
+                and decision.get("occluder_entity_id") == "unknown"
+            )
+            if count > unknowns:
+                return None
+        return NormalizedSchemaOutput(
+            data=canonical,
+            issue_codes=tuple(codes),
+            normalized_field_count=count,
+        )
+    except Exception:
+        return None
+
+
 def _validate_object_inventory(
     result: Mapping[str, Any], validation_context: Mapping[str, Any] | None
 ) -> dict[str, Any]:
@@ -477,6 +682,125 @@ def _pydantic_issue_codes(error: ValidationError, prefix: str) -> tuple[str, ...
     return tuple(codes or [f"{prefix}_SCHEMA_INVALID"])
 
 
+def _scene_choice_pydantic_issue_codes(error: ValidationError) -> tuple[str, ...]:
+    """Return closed field feedback without copying model paths or values."""
+    return _field_pydantic_issue_codes(
+        error, "SCENE_SEMANTICS_CHOICES", _SCENE_CHOICE_ENUM_FIELDS, _SCENE_CHOICE_ENUM_CODES
+    )
+
+
+def _boundary_pydantic_issue_codes(error: ValidationError) -> tuple[str, ...]:
+    """Distinguish only known coarse, boundary-point and fine-segment enum paths."""
+    return _field_pydantic_issue_codes(
+        error, "BOUNDARY_PLAN", _BOUNDARY_ENUM_FIELDS, _BOUNDARY_ENUM_CODES
+    )
+
+
+def _field_pydantic_issue_codes(
+    error: ValidationError,
+    prefix: str,
+    fields: tuple[tuple[str, tuple[str | None, ...], str], ...],
+    field_codes: tuple[str, ...],
+) -> tuple[str, ...]:
+    found: set[str] = set()
+    for issue in error.errors(include_url=False, include_context=False, include_input=False):
+        kind = issue["type"]
+        path = issue.get("loc", ())
+        code = _pydantic_issue_codes_for_type(kind, prefix)
+        for (expected_kind, shape, _), field_code in zip(
+            fields, field_codes
+        ):
+            if kind == expected_kind and len(path) == len(shape) and all(
+                (type(part) is int and part >= 0) if expected is None else part == expected
+                for part, expected in zip(path, shape)
+            ):
+                code = field_code
+                break
+        found.add(code)
+    order = _schema_codes(prefix) + field_codes
+    return tuple(code for code in order if code in found) or (f"{prefix}_SCHEMA_INVALID",)
+
+
+def _coarse_pydantic_issue_codes(error: ValidationError) -> tuple[str, ...]:
+    """Map entity failures to closed families without retaining raw model data."""
+    codes: list[str] = []
+    for issue in error.errors(
+        include_url=False,
+        include_context=False,
+        include_input=False,
+    ):
+        error_type = str(issue["type"])
+        location = issue.get("loc")
+        path = tuple(location) if isinstance(location, (tuple, list)) else ()
+        if path and path[0] == "entity_candidates":
+            if error_type == "too_long":
+                code = "COARSE_PLAN_ENTITY_CANDIDATE_LIMIT"
+            elif error_type == "entity_blank_string":
+                code = "COARSE_PLAN_ENTITY_BLANK_STRING"
+            elif error_type == "entity_unknown_name":
+                code = "COARSE_PLAN_ENTITY_UNKNOWN_NAME"
+            elif error_type == "entity_alias_duplicate":
+                code = "COARSE_PLAN_ENTITY_ALIAS_DUPLICATE"
+            elif path[-1:] == ("role",):
+                code = "COARSE_PLAN_ENTITY_ROLE_INVALID"
+            elif error_type == "extra_forbidden" and len(path) > 1:
+                code = "COARSE_PLAN_ENTITY_EXTRA_FIELD"
+            else:
+                code = _pydantic_issue_codes_for_type(error_type, "COARSE_PLAN")
+        else:
+            code = _pydantic_issue_codes_for_type(error_type, "COARSE_PLAN")
+        if code not in codes:
+            codes.append(code)
+    return tuple(codes or ["COARSE_PLAN_SCHEMA_INVALID"])
+
+
+def _raw_coarse_entity_issue_codes(snapshot: Mapping[str, Any]) -> tuple[str, ...]:
+    """Audit all entity families from one finite JSON snapshot.
+
+    The snapshot contains only built-in JSON containers.  This scan records
+    fixed booleans and never returns candidate keys or values.
+    """
+    candidates = snapshot.get("entity_candidates")
+    if type(candidates) is not list:
+        return ()
+
+    found = {code: False for code in _COARSE_ENTITY_SCHEMA_CODES}
+    found["COARSE_PLAN_ENTITY_CANDIDATE_LIMIT"] = len(candidates) > 64
+    for candidate in candidates:
+        if type(candidate) is not dict:
+            continue
+        if not set(candidate) <= _COARSE_ENTITY_FIELDS:
+            found["COARSE_PLAN_ENTITY_EXTRA_FIELD"] = True
+
+        name = candidate.get("name")
+        aliases = candidate.get("aliases")
+        if type(name) is str and not name.strip():
+            found["COARSE_PLAN_ENTITY_BLANK_STRING"] = True
+        if (
+            type(name) is str
+            and " ".join(name.split()).casefold() == "unknown"
+        ):
+            found["COARSE_PLAN_ENTITY_UNKNOWN_NAME"] = True
+        if type(aliases) is list:
+            normalized_aliases: list[str] = []
+            for alias in aliases:
+                if type(alias) is not str:
+                    continue
+                if not alias.strip():
+                    found["COARSE_PLAN_ENTITY_BLANK_STRING"] = True
+                normalized_aliases.append(" ".join(alias.split()).casefold())
+            if len(normalized_aliases) != len(set(normalized_aliases)):
+                found["COARSE_PLAN_ENTITY_ALIAS_DUPLICATE"] = True
+
+        role = candidate.get("role")
+        if "role" in candidate and (
+            type(role) is not str or role not in _COARSE_ENTITY_ROLES
+        ):
+            found["COARSE_PLAN_ENTITY_ROLE_INVALID"] = True
+
+    return tuple(code for code in _COARSE_ENTITY_SCHEMA_CODES if found[code])
+
+
 def _enrichment_pydantic_issue_codes(error: ValidationError) -> tuple[str, ...]:
     """Return closed enrichment diagnostics without retaining Pydantic locations."""
     codes: list[str] = []
@@ -521,13 +845,24 @@ def _validate_coarse_output(
 ) -> dict[str, Any]:
     duration = _context_finite_number(validation_context, "duration", positive=True)
     try:
-        plan = _model_from_json(CoarsePlan, result)
+        snapshot = _finite_json_snapshot(result)
+    except (TypeError, ValueError, OverflowError, RecursionError):
+        raise DeclaredSchemaOutputError(("COARSE_PLAN_SCHEMA_INVALID",)) from None
+    raw_entity_codes = _raw_coarse_entity_issue_codes(snapshot)
+    try:
+        plan = _model_from_json(CoarsePlan, snapshot)
     except ValidationError as error:
         raise DeclaredSchemaOutputError(
-            _pydantic_issue_codes(error, "COARSE_PLAN")
+            tuple(
+                dict.fromkeys(
+                    raw_entity_codes + _coarse_pydantic_issue_codes(error)
+                )
+            )
         ) from None
     except (TypeError, ValueError, OverflowError, RecursionError):
         raise DeclaredSchemaOutputError(("COARSE_PLAN_SCHEMA_INVALID",)) from None
+    if raw_entity_codes:
+        raise DeclaredSchemaOutputError(raw_entity_codes)
     try:
         validate_coarse_plan(plan, duration)
     except TemporalValidationError as error:
@@ -558,7 +893,7 @@ def _validate_boundary_output(
         plan = _model_from_json(BoundaryPlan, snapshot)
     except ValidationError as error:
         raise DeclaredSchemaOutputError(
-            _pydantic_issue_codes(error, "BOUNDARY_PLAN")
+            _boundary_pydantic_issue_codes(error)
         ) from None
     except (TypeError, ValueError, OverflowError, RecursionError):
         raise DeclaredSchemaOutputError(("BOUNDARY_PLAN_SCHEMA_INVALID",)) from None
@@ -600,6 +935,28 @@ def _boundary_validation_context(
         "max_segment_seconds": validation_context["max_segment_seconds"],
         "allow_topology_fallback": enabled,
     }
+
+
+def boundary_response_contract(context: Any) -> ModelResponseContract:
+    """Authenticate bounded server context before compiling the public schema.
+
+    Parent fields and maximum stay in the authenticated validation/cache context;
+    the provider schema adds no action counts, time windows or vocabulary aliases.
+    Local validation remains authoritative after every model response.
+    """
+    preflight_plain(context, max_bytes=16 * 1024 * 1024, max_nodes=1_000_000, max_depth=32)
+    context = _boundary_validation_context(context)
+    _finite_real(context["max_segment_seconds"], positive=True)
+    try:
+        coarse = _model_from_json(CoarsePlan, context["coarse_plan"])
+        if not coarse.actions:
+            raise ValueError("BoundaryPlan validation context is invalid")
+        _validate_coarse_output(context["coarse_plan"], {"duration": coarse.actions[-1].end})
+    except (TypeError, ValueError):
+        raise ValueError("BoundaryPlan validation context is invalid") from None
+    schema = compile_local_schema(BoundaryPlan.model_json_schema())
+    encoded = canonical(schema)
+    return ModelResponseContract(BOUNDARY_CONTRACT, encoded, hashlib.sha256(encoded.encode()).hexdigest())
 
 
 def _normalize_boundary_topology(
@@ -832,9 +1189,10 @@ def _validate_enrichment_output(
 def _validate_scene_semantics_output(
     result: Mapping[str, Any], validation_context: Mapping[str, Any] | None
 ) -> dict[str, Any]:
+    extra = {"evidence_summary", "segments"} if validation_context and "evidence_summary" in validation_context else set()
     context = _exact_context(
         validation_context,
-        {"duration", "require_observed_content", "required_object_ids"},
+        {"duration", "require_observed_content", "required_object_ids"} | extra,
     )
     duration = _finite_real(context["duration"], positive=True)
     require_content = context["require_observed_content"]
@@ -856,17 +1214,250 @@ def _validate_scene_semantics_output(
     except (TypeError, ValueError, OverflowError, RecursionError):
         raise DeclaredSchemaOutputError(("SCENE_SEMANTICS_SCHEMA_INVALID",)) from None
     try:
-        validate_scene_semantics(
-            scene,
-            duration,
-            require_observed_content=require_content,
-            required_object_ids=tuple(required_ids),
+        summary = None
+        if context.get("evidence_summary") is not None:
+            from ..cv.summary import CvEvidenceSummary
+            summary = CvEvidenceSummary.model_validate(context["evidence_summary"])
+            summary.prompt_record()
+        issue_codes: list[str] = []
+        try:
+            validate_scene_semantics(
+                scene,
+                duration,
+                require_observed_content=require_content,
+                required_object_ids=tuple(required_ids),
+                spatial_evidence_available=summary is not None,
+            )
+        except TemporalValidationError as error:
+            issue_codes.extend(issue.code for issue in error.issues)
+        from .hybrid_result import (
+            ProvenanceValidationError, validate_event_provenance, _reject_artifact_text,
         )
+        try:
+            _reject_artifact_text(scene.model_dump(mode="json"))
+        except ValueError:
+            issue_codes.extend(("SCENE_SPATIAL_INVALID", "SCENE_SPATIAL_PROHIBITED_CONTENT"))
+        names = {obj.object_id: obj.name for obj in scene.objects}
+        for collection in (scene.locations, scene.relations):
+            for item in collection:
+                row = item.model_dump(mode="json")
+                ids = [row["object_id"]] if "object_id" in row else [row["subject_object_id"], row["object_object_id"]]
+                # Absent evidence has already failed the basic scene check;
+                # no trusted provenance context exists to check in that case.
+                if summary is None:
+                    continue
+                try:
+                    validate_event_provenance(
+                        row, segments=context["segments"], summary=summary,
+                        frame_pts=None, spatial=True,
+                        expected_names=[names[key] for key in ids] if set(ids) <= names.keys() else None,
+                    )
+                except ProvenanceValidationError as error:
+                    issue_codes.append("SCENE_SPATIAL_INVALID")
+                    issue_codes.extend("SCENE_SPATIAL_" + code for code in error.issue_codes)
+    except (ValueError, TypeError, KeyError):
+        raise DeclaredSchemaOutputError(("SCENE_SPATIAL_INVALID",)) from None
+    if issue_codes:
+        raise DeclaredSchemaOutputError(tuple(dict.fromkeys(issue_codes)))
+    return scene.model_dump(mode="json")
+
+
+def _validate_occlusion_decision_output(
+    result: Mapping[str, Any], validation_context: Mapping[str, Any] | None
+) -> dict[str, Any] | NormalizedSchemaOutput:
+    from ..cv.summary import CvEvidenceSummary, validate_candidate_identity_evidence
+    keys = {"duration", "candidates"}
+    if validation_context is not None and "evidence_summary" in validation_context:
+        keys.add("evidence_summary")
+    if validation_context is not None and "allow_occluder_unknown_fallback" in validation_context:
+        keys.add("allow_occluder_unknown_fallback")
+    context = _exact_context(validation_context, keys)
+    allow_occluder_fallback = context.get("allow_occluder_unknown_fallback") is True
+    duration = _finite_real(context["duration"], positive=True)
+    raw_candidates = context["candidates"]
+    if type(raw_candidates) is not list or len(raw_candidates) > 256:
+        raise ValueError("OcclusionDecisionSet validation context is invalid")
+    try:
+        candidates = tuple(
+            OcclusionCandidate.model_validate(candidate)
+            for candidate in raw_candidates
+        )
+        if any(c.identity_evidence is not None for c in candidates):
+            source = CvEvidenceSummary.model_validate(context.get("evidence_summary"))
+            validate_candidate_identity_evidence(source, candidates)
+    except (ValidationError, TypeError, ValueError, OverflowError, RecursionError):
+        raise ValueError("OcclusionDecisionSet validation context is invalid") from None
+    try:
+        decisions = _model_from_json(OcclusionDecisionSet, result)
+    except ValidationError as error:
+        raise DeclaredSchemaOutputError(
+            _pydantic_issue_codes(error, "OCCLUSION_DECISION_SET")
+        ) from None
+    except (TypeError, ValueError, OverflowError, RecursionError):
+        raise DeclaredSchemaOutputError(
+            ("OCCLUSION_DECISION_SET_SCHEMA_INVALID",)
+        ) from None
+    try:
+        validate_occlusion_decisions(decisions, candidates, duration=duration)
     except TemporalValidationError as error:
+        if allow_occluder_fallback:
+            ordered = _normalize_occlusion_event_order(
+                decisions, candidates, duration, error
+            )
+            if ordered is not None:
+                return ordered
+            normalized = _normalize_unproposed_occluders(
+                decisions, candidates, duration, error
+            )
+            if normalized is not None:
+                return normalized
         raise DeclaredSchemaOutputError(
             tuple(dict.fromkeys(issue.code for issue in error.issues))
         ) from None
-    return scene.model_dump(mode="json")
+    if allow_occluder_fallback:
+        completed = _complete_occlusion_boundaries(decisions, candidates, duration)
+        if completed is not None:
+            return completed
+    return decisions.model_dump(mode="json")
+
+
+def _normalize_occlusion_event_order(
+    decisions, candidates, duration, error
+) -> NormalizedSchemaOutput | None:
+    """Locally sort per-decision events by (start, end, type).
+
+    Ordering is presentation, not semantics: the model already committed to
+    exact offered intervals, so sorting loses nothing. Only pure ordering
+    failures qualify; any other issue kind disables this path so genuine
+    content faults still surface for repair.
+    """
+    try:
+        if not error.issues or any(
+            issue.code != "OCCLUSION_EVENTS_NOT_ORDERED" for issue in error.issues
+        ):
+            return None
+        snapshot = decisions.model_dump(mode="json")
+        reordered = 0
+        for row in snapshot.get("decisions", ()):
+            events = row.get("events") or []
+            ordered = sorted(
+                events, key=lambda e: (e["start"], e["end"], e["event_type"])
+            )
+            if ordered != events:
+                reordered += 1
+                row["events"] = ordered
+        if not reordered:
+            return None
+        reparsed = _model_from_json(OcclusionDecisionSet, snapshot)
+        validate_occlusion_decisions(reparsed, candidates, duration=duration)
+        return NormalizedSchemaOutput(
+            data=reparsed.model_dump(mode="json"),
+            issue_codes=("OCCLUSION_EVENTS_NOT_ORDERED",),
+            normalized_field_count=reordered,
+        )
+    except Exception:
+        return None
+
+
+def _complete_occlusion_boundaries(
+    decisions, candidates, duration
+) -> NormalizedSchemaOutput | None:
+    """Add offered enter/exit intervals adjacent to a chosen occluded interval.
+
+    A hidden phase implies its transitions. When the candidate offered the
+    enter interval ending exactly at the chosen occluded start (or the exit
+    starting at its end) and the model omitted it, restoring the boundary is
+    mechanical: the interval is a closed offer, and selecting the middle
+    phase already asserts the transition happened.
+    """
+    try:
+        by_id = {c.candidate_id: c for c in candidates}
+        snapshot = decisions.model_dump(mode="json")
+        added = 0
+        for row in snapshot.get("decisions", ()):
+            if row.get("classification") != "occlusion":
+                continue
+            candidate = by_id.get(row.get("candidate_id"))
+            if candidate is None:
+                continue
+            events = row.get("events") or []
+            chosen = {(e["event_type"], e["start"], e["end"]) for e in events}
+            occluded = [e for e in events if e["event_type"] == "occluded"]
+            for interval in candidate.allowed_event_intervals:
+                kind = interval.event_type
+                key = (kind, interval.start, interval.end)
+                if kind == "occlusion_enter" and key not in chosen and any(
+                    o["start"] == interval.end for o in occluded
+                ):
+                    events.append({"event_type": kind, "start": interval.start,
+                                   "end": interval.end})
+                    chosen.add(key)
+                    added += 1
+                if kind == "occlusion_exit" and key not in chosen and any(
+                    o["end"] == interval.start for o in occluded
+                ):
+                    events.append({"event_type": kind, "start": interval.start,
+                                   "end": interval.end})
+                    chosen.add(key)
+                    added += 1
+            events.sort(key=lambda e: (e["start"], e["end"], e["event_type"]))
+            row["events"] = events
+        if not added:
+            return None
+        reparsed = _model_from_json(OcclusionDecisionSet, snapshot)
+        validate_occlusion_decisions(reparsed, candidates, duration=duration)
+        return NormalizedSchemaOutput(
+            data=reparsed.model_dump(mode="json"),
+            issue_codes=("OCCLUSION_BOUNDARIES_COMPLETED",),
+            normalized_field_count=added,
+        )
+    except Exception:
+        return None
+
+
+def _normalize_unproposed_occluders(
+    decisions, candidates, duration, error
+) -> NormalizedSchemaOutput | None:
+    """Locally reset only unlisted occluder attributions to unknown.
+
+    Positive occlusion intervals stay: they are independently anchored to the
+    candidate's allowed_event_intervals, so dropping just the attribution is
+    the minimal information loss. Any other issue kind disables this path.
+    """
+    try:
+        positions: set[int] = set()
+        for issue in error.issues:
+            if issue.code != "OCCLUSION_OCCLUDER_NOT_PROPOSED":
+                return None
+            path = issue.path
+            if (
+                len(path) < 3
+                or path[0] != "decisions"
+                or isinstance(path[1], bool)
+                or not isinstance(path[1], int)
+                or path[2] != "occluder_entity_id"
+            ):
+                return None
+            positions.add(path[1])
+        if not positions:
+            return None
+        snapshot = decisions.model_dump(mode="json")
+        rows = snapshot.get("decisions")
+        if not isinstance(rows, list) or any(
+            position >= len(rows) for position in positions
+        ):
+            return None
+        for position in positions:
+            rows[position]["occluder_entity_id"] = "unknown"
+        reparsed = _model_from_json(OcclusionDecisionSet, snapshot)
+        validate_occlusion_decisions(reparsed, candidates, duration=duration)
+        return NormalizedSchemaOutput(
+            data=reparsed.model_dump(mode="json"),
+            issue_codes=("OCCLUSION_OCCLUDER_NOT_PROPOSED",),
+            normalized_field_count=len(positions),
+        )
+    except Exception:
+        return None
 
 
 def _enrichment_validation_context(
@@ -1097,14 +1688,17 @@ DEFAULT_OUTPUT_SCHEMAS.register(
 DEFAULT_OUTPUT_SCHEMAS.register(
     "CoarsePlan",
     _validate_coarse_output,
-    allowed_issue_codes=_schema_codes("COARSE_PLAN") + _COARSE_TEMPORAL_CODES,
+    allowed_issue_codes=_schema_codes("COARSE_PLAN")
+    + _COARSE_ENTITY_SCHEMA_CODES
+    + _COARSE_TEMPORAL_CODES,
     generic_issue_code="COARSE_PLAN_SCHEMA_INVALID",
 )
 DEFAULT_OUTPUT_SCHEMAS.register(
     "BoundaryPlan",
     _validate_boundary_output,
-    allowed_issue_codes=_schema_codes("BOUNDARY_PLAN") + _BOUNDARY_TEMPORAL_CODES,
+    allowed_issue_codes=_schema_codes("BOUNDARY_PLAN") + _BOUNDARY_ENUM_CODES + _BOUNDARY_TEMPORAL_CODES,
     generic_issue_code="BOUNDARY_PLAN_SCHEMA_INVALID",
+    response_contract_factory=boundary_response_contract,
 )
 DEFAULT_OUTPUT_SCHEMAS.register(
     "EnrichmentResult",
@@ -1122,6 +1716,13 @@ DEFAULT_OUTPUT_SCHEMAS.register(
     generic_issue_code="SCENE_SEMANTICS_SCHEMA_INVALID",
 )
 DEFAULT_OUTPUT_SCHEMAS.register(
+    "OcclusionDecisionSet",
+    _validate_occlusion_decision_output,
+    allowed_issue_codes=_schema_codes("OCCLUSION_DECISION_SET")
+    + _OCCLUSION_TEMPORAL_CODES,
+    generic_issue_code="OCCLUSION_DECISION_SET_SCHEMA_INVALID",
+)
+DEFAULT_OUTPUT_SCHEMAS.register(
     "general_segment",
     _validate_general_segment_output,
     allowed_issue_codes=_schema_codes("GENERAL_SEGMENT")
@@ -1134,4 +1735,13 @@ DEFAULT_OUTPUT_SCHEMAS.register(
     allowed_issue_codes=_schema_codes("GENERAL_SUMMARY")
     + _GENERAL_SUMMARY_TEMPORAL_CODES,
     generic_issue_code="GENERAL_SUMMARY_SCHEMA_INVALID",
+)
+
+
+DEFAULT_OUTPUT_SCHEMAS.register(
+    "SceneSemanticsChoices", validate_scene_choices,
+    allowed_issue_codes=_schema_codes("SCENE_SEMANTICS_CHOICES")
+        + _SCENE_CHOICE_ENUM_CODES + CHOICE_CODES + _schema_codes("SCENE_SEMANTICS") + _SCENE_TEMPORAL_CODES,
+    generic_issue_code="SCENE_SEMANTICS_CHOICES_SCHEMA_INVALID",
+    response_contract_factory=scene_response_contract,
 )

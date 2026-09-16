@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import json
 import math
+import os
 import shutil
 import threading
 import time
@@ -19,7 +21,13 @@ from .models.base import ModelOutputError, ModelRequest, VideoModel, VideoSessio
 from .model_alias import DEFAULT_MODEL_ALIAS, validate_model_alias
 from .pipelines.base import PipelineContext, PipelineRegistry, SafePipelineError
 from .pipelines.output_validation import DEFAULT_OUTPUT_SCHEMAS, OutputSchemaRegistry
-from .store import InvalidTransition, SQLiteTaskStore, WorkerMismatch
+from .store import (
+    InvalidTransition,
+    SQLiteTaskStore,
+    WorkerMismatch,
+    SemanticCachePublicationError,
+)
+from . import semantic_cache as semantic
 
 
 class WorkerError(RuntimeError):
@@ -122,6 +130,7 @@ class GPUWorker:
         session_idle_seconds: float = 900.0,
         monotonic: Callable[[], float] = time.monotonic,
         output_schemas: OutputSchemaRegistry = DEFAULT_OUTPUT_SCHEMAS,
+        semantic_cache_enabled: bool = False,
     ) -> None:
         self.store = store
         self.model = model
@@ -142,6 +151,9 @@ class GPUWorker:
         )
         self._monotonic = monotonic
         self._output_schemas = output_schemas
+        if type(semantic_cache_enabled) is not bool:
+            raise ValueError("semantic_cache_enabled must be a boolean")
+        self.semantic_cache_enabled = semantic_cache_enabled
         self._sessions: dict[str, _SessionUse] = {}
 
     def run_once(self, *, now: float | None = None) -> bool:
@@ -150,6 +162,7 @@ class GPUWorker:
         job: InferenceJob | None = None
         claim_returned = False
         request: ModelRequest | None = None
+        metrics: dict[str, Any] | None = None
 
         def register_claim(claimed: InferenceJob) -> None:
             nonlocal job
@@ -179,36 +192,66 @@ class GPUWorker:
                 fixed_now=now,
             ):
                 request = self._attach_video_session(_model_request(job), job)
+                publication = None
                 try:
-                    try:
-                        generated = self.model.generate(request)
-                        if not isinstance(generated, Mapping):
-                            raise ModelOutputError(
-                                "model output must be a structured object"
-                            )
-                        result = self._output_schemas.sanitize(
-                            request.schema_name,
-                            generated,
-                            _schema_validation_context(job.payload, request),
+                    context = _schema_validation_context(job.payload, request)
+                    request = replace(request, response_contract=
+                        self._output_schemas.model_response_contract(request.schema_name, context))
+                    identity = (
+                        semantic.make_identity(self.model, request, context)
+                        if self.semantic_cache_enabled else None
+                    )
+
+                    def validate(value: Mapping[str, Any]) -> bool:
+                        return semantic.safe_result(
+                            value, request.schema_name, context, self._output_schemas
                         )
-                    except ModelOutputError:
-                        result = self._output_schemas.model_output_failure(
-                            request.schema_name
-                        )
-                        if result is None:
-                            raise
+
+                    cached = (
+                        self.store.lookup_semantic_result(identity, validate)
+                        if identity is not None else None
+                    )
+                    if cached is not None:
+                        result = cached
+                        metrics = {
+                            "inference_seconds": 0.0,
+                            "input_tokens": 0,
+                            "output_tokens": 0,
+                        }
+                    else:
+                        result, metrics = self._generate_result(request, context)
+                    if identity is not None:
+                        metrics.update({
+                            "semantic_cache_hit": cached is not None,
+                            "semantic_cache_published": False,
+                            "semantic_cache_key": identity.key,
+                            "semantic_cache_result_sha256": semantic.sha256(
+                                semantic.canonical_json(result)
+                            ),
+                        })
+                        if cached is None:
+                            publication = (identity, validate)
                 finally:
                     try:
                         self._release_request(request)
                     finally:
                         self._remember_session(request, job.task_id)
-            self.store.complete_inference_job(
-                job.job_id,
-                result,
-                worker_id=self.worker_id,
-                attempt=job.attempt,
-                now=now,
+            if (publication is not None
+                    and semantic.bind_video(request.video_path) != identity.video):
+                publication = None
+            completion = dict(
+                worker_id=self.worker_id, attempt=job.attempt, now=now, metrics=metrics
             )
+            try:
+                if publication is not None:
+                    self.store.complete_inference_job(
+                        job.job_id, result, semantic_publication=publication, **completion
+                    )
+                else:
+                    self.store.complete_inference_job(job.job_id, result, **completion)
+            except SemanticCachePublicationError:
+                # The failed transaction rolled back; a fresh completion rechecks ownership.
+                self.store.complete_inference_job(job.job_id, result, **completion)
         except (InvalidTransition, WorkerMismatch):
             if not claim_returned:
                 raise
@@ -253,6 +296,61 @@ class GPUWorker:
         finally:
             request = None
         return True
+
+    def _generate_result(
+        self,
+        request: ModelRequest,
+        context: Mapping[str, Any] | None,
+    ) -> tuple[dict[str, Any], dict[str, Any]]:
+        generation_started = _finite_clock(self._monotonic())
+        try:
+            try:
+                generated = self.model.generate(request)
+            finally:
+                inference_seconds = _finite_clock(self._monotonic()) - generation_started
+            if not isinstance(generated, Mapping):
+                raise ModelOutputError("model output must be a structured object")
+            result = self._output_schemas.sanitize(request.schema_name, generated, context)
+            self._record_invalid_output(request, result, generated)
+        except ModelOutputError:
+            result = self._output_schemas.model_output_failure(request.schema_name)
+            if result is None:
+                raise
+        metrics = _model_request_metrics(self.model, inference_seconds=inference_seconds)
+        return result, metrics
+
+    def _record_invalid_output(
+        self,
+        request: ModelRequest,
+        result: Mapping[str, Any],
+        generated: Mapping[str, Any],
+    ) -> None:
+        """Append the rejected raw model output to a diagnostics sidecar file.
+
+        Off by default: raw model output may carry private content, and the
+        validation contract intentionally persists only closed issue codes.
+        Set LAS_DEBUG_INVALID_OUTPUTS=1 on a trusted diagnostic host to
+        capture what the model actually wrote for stubborn failure codes.
+        Diagnostics must never break the job.
+        """
+        if os.environ.get("LAS_DEBUG_INVALID_OUTPUTS") != "1":
+            return
+        try:
+            envelope = result.get("_schema_validation")
+            if not isinstance(envelope, Mapping) or envelope.get("status") != "invalid":
+                return
+            path = Path(f"{self.store.database_path}.invalid-outputs.jsonl")
+            record = {
+                "time": time.time(),
+                "worker_id": self.worker_id,
+                "schema_name": request.schema_name,
+                "issue_codes": list(envelope.get("issue_codes", ())),
+                "raw_output": generated,
+            }
+            with open(path, "a", encoding="utf-8") as stream:
+                stream.write(json.dumps(record, ensure_ascii=False, default=str) + "\n")
+        except Exception:
+            pass
 
     def run_forever(
         self,
@@ -631,6 +729,23 @@ def _model_request(job: InferenceJob) -> ModelRequest:
         reasoning_effort=payload.get("reasoning_effort"),
         clip_context=payload.get("clip_context"),
     )
+
+
+def _model_request_metrics(
+    model: VideoModel,
+    *,
+    inference_seconds: float,
+) -> dict[str, Any]:
+    request_metrics = getattr(model, "request_metrics", None)
+    reported = request_metrics() if callable(request_metrics) else None
+    if reported is None:
+        metrics: dict[str, Any] = {}
+    elif isinstance(reported, Mapping):
+        metrics = dict(reported)
+    else:
+        raise TypeError("model request_metrics must return a mapping or None")
+    metrics["inference_seconds"] = inference_seconds
+    return metrics
 
 
 def _schema_validation_context(

@@ -9,7 +9,7 @@ temporal schemas, conservative repair, and deterministic JSONL export.
 
 ## What is shipped
 
-- Local, offline-capable Qwen3-VL inference; no Ark or remote model forwarding.
+- Local, offline-capable Qwen3-VL inference, with an explicit opt-in ARK semantic worker.
 - General video captioning, active-object detection, and embodied action timelines.
 - Persistent SQLite task/job coordination with leases and per-GPU workers.
 - Strict structured-output validation and auditable repair-only normalization.
@@ -34,6 +34,7 @@ Use `python -m pip install -e '.[gpu]'` only on a compatible CUDA host.
 - [GPU acceptance](docs/reports/2026-09-02-gpu-acceptance.md)
 - [LAS/local implementation and annotation comparison](docs/reports/2026-09-03-las-vs-local-implementation-report.md)
 - [Five-demo synchronized comparison viewer](evaluation/viewer/README.md)
+- [SAM3.1 runtime and one-video acceptance](docs/deployment/sam31-runtime.md)
 
 ## Development
 
@@ -59,10 +60,10 @@ add a license before changing the repository to Public.
 
 This repository runs a self-hosted, asynchronous video-understanding service.
 Its public surface is exactly `POST /api/v1/submit` and `POST /api/v1/poll`.
-Inference is visual-only: the service neither extracts audio nor invokes ASR,
-Ark, remote LAS, or another model API. `run-fake` is a deterministic local
-development stack; `gpu-worker` is the only process role that imports and loads
-the optional Qwen/PyTorch runtime.
+Inference is visual-only: the service neither extracts audio nor invokes ASR or
+remote LAS. Remote ARK semantics are explicit opt-in. `run-fake` is a
+deterministic local development stack; only dedicated semantic/CV workers load
+their optional model runtimes.
 
 The local implementation supports operator IDs `las_long_video_understand` and
 `las_video_understanding`, both at version `v1`, and these templates:
@@ -120,11 +121,30 @@ Paste only that digest into `LAS_API_KEY_SHA256`. The `.env.example` fields are:
 | `LAS_MODEL_REGISTRY` | JSON alias-to-local-directory allowlist; never a remote model ID. |
 | `LAS_BACKEND` | `qwen3_vl` for production GPU workers. `run-fake` ignores it safely. |
 | `LAS_GPU_DEVICES` | Comma-separated device IDs a `gpu-worker` may claim. |
+| `LAS_ARK_API_KEY` | Server-owned ARK credential; never accepted from Submit payloads. |
+| `LAS_ARK_MODEL_REGISTRY` | JSON alias-to-remote-model allowlist, separate from local checkpoint paths. |
+| `LAS_ARK_PROXY` | Optional explicit HTTPS proxy; ambient proxy variables are ignored. |
 | `LAS_MAX_MODEL_OUTPUT_CHARS` | Strict structured-output size limit. |
 | `LAS_SEGMENT_SECONDS`, `LAS_SEGMENT_OVERLAP_SECONDS` | General-video split and overlap. |
 | `LAS_MAX_FINE_SEGMENT_SECONDS` | Maximum embodied fine-segment duration. |
 | `LAS_LEASE_SECONDS` | Recoverable coordinator/inference claim lease. |
 | `LAS_TOS_ENDPOINT`, `LAS_TOS_REGION`, `LAS_TOS_ACCESS_KEY`, `LAS_TOS_SECRET_KEY` | Optional TOS access, supplied only at runtime. |
+
+### Opt-in Doubao semantic worker
+
+To replace semantic-stage execution with Doubao, configure `LAS_BACKEND=ark`,
+`LAS_ARK_API_KEY`, and `LAS_ARK_MODEL_REGISTRY='{"doubao-pro":"doubao-seed-2-1-pro-260628"}'`
+in the dedicated worker environment, then submit with `model_name: "doubao-pro"` and launch:
+
+```console
+las-repro ark-worker --model-name doubao-pro --worker-id ark-0
+```
+
+The worker sends sampled JPEG frames and original-video timestamps to the ARK
+Responses endpoint. It sends no audio, local filenames, or caller credentials.
+Set `LAS_ARK_PROXY` when an explicit proxy is required. To roll back locally,
+submit the Qwen alias and run the existing `gpu-worker` processes with
+`LAS_BACKEND=qwen3_vl`; there is no silent fallback or model relabeling.
 
 Create the database directory as the dedicated service account, then initialize
 the database once:
@@ -184,6 +204,16 @@ not load model weights, require a GPU, or need TOS credentials:
 ```bash
 las-repro run-fake
 ```
+
+CV evidence has three explicit modes: `disabled` (the default, with no CV
+artifact), `fake` (deterministic CPU evidence for development), and `sam31`
+(pinned local SAM3.1 on the isolated CV worker). Installing core, running
+disabled mode, or running Fake mode does not install or import SAM packages.
+The service owns published evidence artifacts and exposes authenticated handles,
+not raw cache paths. Video/checkpoint/model/configuration identity invalidates
+cache reuse; quarantine old cache state when any pin or evidence setting changes.
+Provider failure follows the validated degradation contract; there is no silent
+SAM-to-Fake or ARK-to-Qwen fallback and no model relabeling.
 
 `las-repro run-fake --once` does not open an HTTP listener. It drains all tasks
 currently claimable in the configured database, waits for their fake inference
@@ -348,11 +378,15 @@ worker loads one model on exactly one configured device:
 ```bash
 las-repro api
 las-repro coordinator --worker-id coordinator-0
-las-repro gpu-worker --device 0 --worker-id gpu-0
-las-repro gpu-worker --device 1 --worker-id gpu-1
-las-repro gpu-worker --device 2 --worker-id gpu-2
-las-repro gpu-worker --device 3 --worker-id gpu-3
+las-repro ark-worker --model-name doubao-pro --worker-id ark-0
+las-repro cv-worker --provider sam31 --device 3 --worker-id cv-sam31-3
 ```
+
+This is the primary ARK+SAM route: ARK is remote and consumes no local GPU;
+SAM owns physical GPU 3. The explicit alternate/rollback route replaces ARK
+with three local Qwen workers on physical GPUs 0, 1, and 2. Never run Qwen on
+GPU 3. See the [SAM3.1 runtime guide](docs/deployment/sam31-runtime.md) for the
+pinned install, smoke, lifecycle, cache quarantine, and rollback commands.
 
 On SIGTERM/SIGINT, a worker stops making new claims, finishes its current
 synchronous claim when possible, or fences an interrupted owner/generation by
@@ -396,8 +430,37 @@ PY
 Point `LAS_MODEL_REGISTRY` at that verified local directory, install with
 `--no-index --find-links "$WHEELHOUSE"`, then run
 `scripts/gpu_smoke.py --model-dir "$MODEL_DIRECTORY" --video "$SILENT_VIDEO"
---devices 0,1,2,3`. The model loader enforces `local_files_only=True`, disables
+--devices 0,1,2`. The model loader enforces `local_files_only=True`, disables
 remote code, and assigns the full model to the worker's one `cuda:N` device.
+
+Hybrid results expose total, model, and CV evidence seconds; cache-hit state;
+processed-frame, entity, and track counts; peak allocated bytes; and repair and
+degradation counts. Evaluate frozen Qwen inputs and the hybrid output with:
+
+```bash
+python scripts/evaluate_las_alignment.py \
+  --reference-manifest "$REFERENCE_MANIFEST" \
+  --qwen-results "$QWEN_RESULTS" --qwen-metadata "$QWEN_METADATA" \
+  --doubao-results "$DOUBAO_RESULTS" --doubao-metadata "$DOUBAO_METADATA" \
+  --hybrid-results "$HYBRID_RESULTS" --hybrid-metadata "$HYBRID_METADATA" \
+  --artifact-root "$LAS_CV_CACHE_ROOT" --review "$REVIEW" \
+  --mapping evaluation/config/las_alignment_mapping_v1.json \
+  --output "$ALIGNMENT_REPORT"
+```
+
+Project the validated artifacts into a viewer variant. `HYBRID_VARIANT` is one
+of `doubao_only`, `doubao_sam31`, or `qwen_sam31`; fine evidence is optional:
+
+```bash
+python scripts/build_comparison_viewer_data.py \
+  --input-dir "$QWEN_RESULTS" --output-dir evaluation/viewer/data/local \
+  --manifest evaluation/viewer/data/manifest.json \
+  --hybrid-input-dir "$HYBRID_RESULTS" \
+  --hybrid-output-dir "evaluation/viewer/data/$HYBRID_VARIANT" \
+  --hybrid-metadata "$HYBRID_METADATA" --hybrid-variant "$HYBRID_VARIANT" \
+  --artifact-root "$LAS_CV_CACHE_ROOT" --review "$REVIEW" \
+  --media-dir evaluation/viewer/media --include-fine-segments
+```
 
 ## Failures, logs, cleanup, and backup
 

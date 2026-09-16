@@ -28,11 +28,27 @@ from las_repro.pipelines.validators import (
 )
 
 
+def _entity_candidates() -> list[dict[str, Any]]:
+    return [
+        {
+            "name": "right hand",
+            "aliases": ["hand"],
+            "role": "actor",
+        },
+        {
+            "name": "red container",
+            "aliases": ["container"],
+            "role": "manipulated_object",
+        },
+    ]
+
+
 @pytest.fixture
 def coarse_plan() -> CoarsePlan:
     return CoarsePlan.model_validate(
         {
             "task_description": "move the red container",
+            "entity_candidates": _entity_candidates(),
             "actions": [
                 {
                     "action_index": 0,
@@ -51,6 +67,405 @@ def coarse_plan() -> CoarsePlan:
             ],
         }
     )
+
+
+def _valid_entity_coarse_payload() -> dict[str, Any]:
+    """Return a literal Pass-A payload independent of production builders."""
+    return {
+        "task_description": "move the red container",
+        "entity_candidates": _entity_candidates(),
+        "actions": [
+            {
+                "action_index": 0,
+                "start": 0.0,
+                "end": 2.0,
+                "description": "right hand moves red container",
+                "event_type": "transport",
+            }
+        ],
+    }
+
+
+def test_coarse_plan_requires_explicit_entity_candidates() -> None:
+    """Removing the inventory would leave the CV request without model evidence."""
+    valid = _valid_entity_coarse_payload()
+    parsed = CoarsePlan.model_validate(valid)
+    validate_coarse_plan(parsed, parsed.actions[-1].end)
+
+    assert parsed.entity_candidates[1].name == "red container"
+    missing = copy.deepcopy(valid)
+    del missing["entity_candidates"]
+    with pytest.raises(ValidationError):
+        CoarsePlan.model_validate(missing)
+
+
+@pytest.mark.parametrize("name", ["unknown", " UNKNOWN ", "\tUnKnOwN\n"])
+def test_coarse_plan_rejects_entity_names_discarded_as_unknown(
+    name: str,
+) -> None:
+    raw = _valid_entity_coarse_payload()
+    raw["entity_candidates"] = [
+        {"name": name, "aliases": [], "role": "manipulated_object"}
+    ]
+
+    with pytest.raises(ValidationError):
+        CoarsePlan.model_validate(raw)
+
+
+@pytest.mark.parametrize(
+    ("entity_candidates", "expected_code"),
+    [
+        (
+            [
+                {
+                    "name": "red container",
+                    "aliases": [],
+                    "role": "manipulated_object",
+                }
+            ]
+            * 65,
+            "COARSE_PLAN_ENTITY_CANDIDATE_LIMIT",
+        ),
+        (
+            [{"name": "  ", "aliases": [], "role": "other"}],
+            "COARSE_PLAN_ENTITY_BLANK_STRING",
+        ),
+        (
+            [{"name": "cup", "aliases": ["  "], "role": "other"}],
+            "COARSE_PLAN_ENTITY_BLANK_STRING",
+        ),
+        (
+            [
+                {
+                    "name": " \tUnKnOwN\n",
+                    "aliases": [],
+                    "role": "manipulated_object",
+                }
+            ],
+            "COARSE_PLAN_ENTITY_UNKNOWN_NAME",
+        ),
+        (
+            [
+                {
+                    "name": "cup",
+                    "aliases": ["Mug", " mug "],
+                    "role": "manipulated_object",
+                }
+            ],
+            "COARSE_PLAN_ENTITY_ALIAS_DUPLICATE",
+        ),
+        (
+            [{"name": "cup", "aliases": [], "role": "private-role-token"}],
+            "COARSE_PLAN_ENTITY_ROLE_INVALID",
+        ),
+        (
+            [
+                {
+                    "name": "cup",
+                    "aliases": [],
+                    "role": "other",
+                    "private-key-token": "must-not-survive",
+                }
+            ],
+            "COARSE_PLAN_ENTITY_EXTRA_FIELD",
+        ),
+    ],
+)
+def test_coarse_entity_schema_families_have_closed_repair_codes(
+    entity_candidates: list[dict[str, Any]], expected_code: str
+) -> None:
+    """Every entity failure needs actionable diagnostics without raw model text."""
+    raw = _valid_entity_coarse_payload()
+    raw["entity_candidates"] = entity_candidates
+
+    sanitized = DEFAULT_OUTPUT_SCHEMAS.sanitize(
+        "CoarsePlan",
+        raw,
+        {"duration": 2.0},
+    )
+
+    assert sanitized == {
+        "_schema_validation": {
+            "schema_name": "CoarsePlan",
+            "status": "invalid",
+            "issue_codes": [expected_code],
+        }
+    }
+    encoded = json.dumps(sanitized)
+    assert "private-role-token" not in encoded
+    assert "private-key-token" not in encoded
+    assert "must-not-survive" not in encoded
+
+
+@pytest.mark.parametrize(
+    ("candidate_count", "expected_codes"),
+    [
+        (
+            1,
+            [
+                "COARSE_PLAN_ENTITY_BLANK_STRING",
+                "COARSE_PLAN_ENTITY_UNKNOWN_NAME",
+                "COARSE_PLAN_ENTITY_ALIAS_DUPLICATE",
+                "COARSE_PLAN_ENTITY_ROLE_INVALID",
+                "COARSE_PLAN_ENTITY_EXTRA_FIELD",
+            ],
+        ),
+        (
+            65,
+            [
+                "COARSE_PLAN_ENTITY_CANDIDATE_LIMIT",
+                "COARSE_PLAN_ENTITY_BLANK_STRING",
+                "COARSE_PLAN_ENTITY_UNKNOWN_NAME",
+                "COARSE_PLAN_ENTITY_ALIAS_DUPLICATE",
+                "COARSE_PLAN_ENTITY_ROLE_INVALID",
+                "COARSE_PLAN_ENTITY_EXTRA_FIELD",
+            ],
+        ),
+    ],
+)
+def test_coarse_entity_schema_gate_aggregates_all_discoverable_families_once(
+    candidate_count: int, expected_codes: list[str]
+) -> None:
+    """Nested failures and the list cap must not force serial field repairs."""
+    private_alias = "private-alias-token"
+    private_role = "private-role-token"
+    private_key = "private-key-token"
+    private_value = "private-value-token"
+    raw = _valid_entity_coarse_payload()
+    raw["entity_candidates"] = [
+        {
+            "name": " \tUnKnOwN\n",
+            "aliases": ["  ", private_alias, f" {private_alias.upper()} "],
+            "role": private_role,
+            private_key: private_value,
+        }
+        for _ in range(candidate_count)
+    ]
+
+    sanitized = DEFAULT_OUTPUT_SCHEMAS.sanitize(
+        "CoarsePlan",
+        raw,
+        {"duration": 2.0},
+    )
+
+    assert sanitized == {
+        "_schema_validation": {
+            "schema_name": "CoarsePlan",
+            "status": "invalid",
+            "issue_codes": expected_codes,
+        }
+    }
+    persisted = json.dumps(sanitized)
+    for private in (private_alias, private_role, private_key, private_value):
+        assert private not in persisted
+
+
+def test_coarse_entity_snapshot_finds_nonstring_role_past_list_short_circuit() -> None:
+    raw = _valid_entity_coarse_payload()
+    raw["entity_candidates"] = [
+        {"name": "cup", "aliases": [], "role": 7} for _ in range(65)
+    ]
+
+    sanitized = DEFAULT_OUTPUT_SCHEMAS.sanitize(
+        "CoarsePlan", raw, {"duration": 2.0}
+    )
+
+    assert sanitized == {
+        "_schema_validation": {
+            "schema_name": "CoarsePlan",
+            "status": "invalid",
+            "issue_codes": [
+                "COARSE_PLAN_ENTITY_CANDIDATE_LIMIT",
+                "COARSE_PLAN_ENTITY_ROLE_INVALID",
+            ],
+        }
+    }
+
+
+@pytest.mark.parametrize(
+    ("event_type", "description"),
+    [
+        ("reach_and_grasp", "right hand reaches for red container"),
+        ("lift", "right hand picks red container up"),
+        ("transport", "right hand moves red container forward"),
+        ("transport", "right hand manipulates red container"),
+        ("lower_and_place", "right hand places red container down"),
+        ("release", "right hand releases red container"),
+        ("search_or_adjust", "right hand searches for red container"),
+    ],
+)
+def test_coarse_plan_requires_an_entity_for_each_concrete_target_event(
+    event_type: str, description: str
+) -> None:
+    """An explicit target may not silently disappear before CV normalization."""
+    targeted = _valid_entity_coarse_payload()
+    targeted["entity_candidates"] = []
+    targeted["actions"][0]["event_type"] = event_type
+    targeted["actions"][0]["description"] = description
+    plan = CoarsePlan.model_validate(targeted)
+
+    with pytest.raises(TemporalValidationError) as error:
+        validate_coarse_plan(plan, duration=2.0)
+
+    assert [issue.code for issue in error.value.issues] == [
+        "EMPTY_ENTITY_CANDIDATES"
+    ]
+
+
+@pytest.mark.parametrize(
+    ("event_type", "suffix"),
+    [
+        ("reach_and_grasp", "reaches for unknown"),
+        ("lift", "lifts unknown"),
+        ("transport", "moves unknown"),
+        ("lower_and_place", "places unknown"),
+        ("release", "releases unknown"),
+        ("search_or_adjust", "adjusts unknown"),
+    ],
+)
+@pytest.mark.parametrize(
+    "subject",
+    ["left hand", "right hand", "both hands", "neither hand"],
+)
+def test_empty_entities_allow_only_the_event_specific_exact_unknown_template(
+    event_type: str,
+    suffix: str,
+    subject: str,
+) -> None:
+    payload = {
+        "task_description": "perform an action without a concrete target",
+        "entity_candidates": [],
+        "actions": [
+            {
+                "action_index": 0,
+                "start": 0.0,
+                "end": 1.0,
+                "description": f"{subject} {suffix}",
+                "event_type": event_type,
+            }
+        ],
+    }
+
+    validate_coarse_plan(CoarsePlan.model_validate(payload), duration=1.0)
+
+
+@pytest.mark.parametrize(
+    ("event_type", "description"),
+    [
+        ("idle", "neither hand waits beside red container"),
+        ("retract", "right hand retracts from red container"),
+        ("unknown_action", "right hand moves red container"),
+    ],
+)
+def test_empty_entities_do_not_restrict_non_target_bearing_events(
+    event_type: str,
+    description: str,
+) -> None:
+    payload = {
+        "task_description": "perform a visible action",
+        "entity_candidates": [],
+        "actions": [
+            {
+                "action_index": 0,
+                "start": 0.0,
+                "end": 1.0,
+                "description": description,
+                "event_type": event_type,
+            }
+        ],
+    }
+
+    validate_coarse_plan(CoarsePlan.model_validate(payload), duration=1.0)
+
+
+_NONCANONICAL_TARGETLESS_DESCRIPTIONS = (
+    ("reach_and_grasp", "right hand reaches for it"),
+    ("lift", "right hand lifts object"),
+    ("transport", "right hand moves it"),
+    ("lower_and_place", "right hand places item"),
+    ("release", "right hand releases none"),
+    ("search_or_adjust", "right hand searches something"),
+    ("transport", "right hand moves it rapidly"),
+    ("transport", "right hand moves it cautiously"),
+    ("transport", "right hand moves it precisely"),
+    ("transport", "right hand moves it top-to-bottom"),
+    ("transport", "right hand moves it bottom-to-top"),
+    ("transport", "right hand moves it counter-clockwise"),
+    ("transport", "right hand privately moves it"),
+    ("transport", "right hand rapidly moves it"),
+    ("transport", "right hand moves it slowly"),
+    ("transport", "right hand moves it gently"),
+    ("transport", "right hand gently moves it"),
+    ("transport", "right hand moves unknown rapidly"),
+    ("transport", "right hand moves unknown."),
+    ("transport", "Right hand moves unknown"),
+    ("transport", "right  hand moves unknown"),
+    ("transport", "robot moves unknown"),
+    ("transport", "right hand lifts unknown"),
+)
+
+
+@pytest.mark.parametrize(
+    ("event_type", "description"),
+    _NONCANONICAL_TARGETLESS_DESCRIPTIONS,
+)
+def test_empty_entities_reject_every_noncanonical_target_bearing_description(
+    event_type: str,
+    description: str,
+) -> None:
+    payload = {
+        "task_description": "perform an action without a concrete target",
+        "entity_candidates": [],
+        "actions": [
+            {
+                "action_index": 0,
+                "start": 0.0,
+                "end": 1.0,
+                "description": description,
+                "event_type": event_type,
+            }
+        ],
+    }
+
+    with pytest.raises(TemporalValidationError) as error:
+        validate_coarse_plan(CoarsePlan.model_validate(payload), duration=1.0)
+
+    assert [issue.code for issue in error.value.issues] == [
+        "EMPTY_ENTITY_CANDIDATES"
+    ]
+
+
+@pytest.mark.parametrize(
+    ("event_type", "description"),
+    _NONCANONICAL_TARGETLESS_DESCRIPTIONS,
+)
+def test_nonempty_entities_do_not_apply_the_targetless_description_grammar(
+    event_type: str,
+    description: str,
+) -> None:
+    payload = _valid_entity_coarse_payload()
+    payload["actions"][0]["event_type"] = event_type
+    payload["actions"][0]["description"] = description
+
+    validate_coarse_plan(CoarsePlan.model_validate(payload), duration=2.0)
+
+
+def test_empty_entity_issue_contains_only_a_fixed_code_path_and_message() -> None:
+    """The model's target text must not enter durable repair diagnostics."""
+    private_target = "private-target-token"
+    payload = _valid_entity_coarse_payload()
+    payload["entity_candidates"] = []
+    payload["actions"][0]["description"] = f"right hand moves {private_target}"
+    plan = CoarsePlan.model_validate(payload)
+
+    with pytest.raises(TemporalValidationError) as error:
+        validate_coarse_plan(plan, duration=2.0)
+
+    [issue] = error.value.issues
+    assert issue.code == "EMPTY_ENTITY_CANDIDATES"
+    assert issue.path == ("entity_candidates",)
+    assert private_target not in issue.message
+    assert private_target not in str(error.value)
 
 
 @pytest.fixture
@@ -157,6 +572,7 @@ def test_models_reject_nonfinite_times_invalid_enums_and_enrichment_shape():
         CoarsePlan.model_validate(
             {
                 "task_description": "move container",
+                "entity_candidates": _entity_candidates(),
                 "actions": [
                     {
                         "action_index": 0,
@@ -203,8 +619,8 @@ def test_models_reject_nonfinite_times_invalid_enums_and_enrichment_shape():
         )
 
 
-def test_enrichment_accepts_proven_touch_skill_without_widening_skill_vocabulary():
-    """Missing ``touch`` would reject the replayed payload or admit unproven aliases."""
+def test_enrichment_skill_vocabulary_matches_official_las_event_types():
+    """Drifting from the official 19-word vocabulary would silently split taxonomies."""
     enrichment = EnrichmentResult.model_validate(
         {
             "segments": [
@@ -212,7 +628,7 @@ def test_enrichment_accepts_proven_touch_skill_without_widening_skill_vocabulary
                     "segment_index": 0,
                     "actor": "right_gripper",
                     "actor_state": "contacting",
-                    "skill": "touch",
+                    "skill": "contact",
                     "target": "container",
                     "visual_motion_state": "low",
                     "confidence": 0.9,
@@ -221,24 +637,27 @@ def test_enrichment_accepts_proven_touch_skill_without_widening_skill_vocabulary
         }
     )
 
-    assert enrichment.segments[0].skill is Skill.TOUCH
+    assert enrichment.segments[0].skill is Skill.CONTACT
     assert {skill.name: skill.value for skill in Skill} == {
-        "HOLD": "hold",
-        "REACH": "reach",
-        "GRASP": "grasp",
-        "PICK": "pick",
-        "LIFT": "lift",
         "MOVE": "move",
-        "PLACE": "place",
+        "TRANSPORT": "transport",
+        "GRASP": "grasp",
+        "REACH": "reach",
         "RELEASE": "release",
+        "LIFT": "lift",
+        "PLACE": "place",
+        "APPROACH": "approach",
+        "CONTACT": "contact",
         "PUSH": "push",
         "PULL": "pull",
         "ROTATE": "rotate",
-        "OPEN": "open",
-        "CLOSE": "close",
-        "RETRACT": "retract",
+        "STOP": "stop",
+        "AUTONOMOUS_MOTION": "autonomous_motion",
+        "STATE_CHANGE": "state_change",
+        "OCCLUSION_ENTER": "occlusion_enter",
+        "OCCLUDED": "occluded",
+        "OCCLUSION_EXIT": "occlusion_exit",
         "UNKNOWN": "unknown",
-        "TOUCH": "touch",
     }
     with pytest.raises(ValidationError):
         EnrichmentResult.model_validate(
@@ -287,6 +706,7 @@ def test_models_reject_coercive_timestamp_inputs(invalid_time: object):
         CoarsePlan.model_validate(
             {
                 "task_description": "move container",
+                "entity_candidates": _entity_candidates(),
                 "actions": [
                     {
                         "action_index": 0,
@@ -1110,23 +1530,26 @@ def test_models_reject_negative_timestamps_even_inside_comparison_tolerance(
     negative_time: float,
 ):
     """Timestamp domain errors are schema errors, not tolerant topology differences."""
-    with pytest.raises(ValidationError):
-        CoarsePlan.model_validate(
+    cases = (
+        (
+            CoarsePlan,
             {
                 "task_description": "move container",
+                "entity_candidates": _entity_candidates(),
                 "actions": [
                     {
                         "action_index": 0,
-                        "start": negative_time,
+                        "start": 0.0,
                         "end": 1.0,
                         "description": "move container",
                         "event_type": "transport",
                     }
                 ],
-            }
-        )
-    with pytest.raises(ValidationError):
-        BoundaryPlan.model_validate(
+            },
+            ("actions", 0, "start"),
+        ),
+        (
+            BoundaryPlan,
             {
                 "task_description": "move container",
                 "actions": [
@@ -1139,7 +1562,7 @@ def test_models_reject_negative_timestamps_even_inside_comparison_tolerance(
                         "boundary_points": [
                             {
                                 "boundary_id": "start",
-                                "time": negative_time,
+                                "time": 0.0,
                                 "event_type": "action_start",
                                 "visual_evidence": "hand is visible",
                             }
@@ -1147,59 +1570,11 @@ def test_models_reject_negative_timestamps_even_inside_comparison_tolerance(
                         "fine_segments": [],
                     }
                 ],
-            }
-        )
-    with pytest.raises(ValidationError):
-        BoundaryPlan.model_validate(
-            {
-                "task_description": "move container",
-                "actions": [
-                    {
-                        "action_index": 0,
-                        "start": 0.0,
-                        "end": 1.0,
-                        "description": "move container",
-                        "event_type": "transport",
-                        "boundary_points": [],
-                        "fine_segments": [
-                            {
-                                "segment_index": 0,
-                                "start": negative_time,
-                                "end": 1.0,
-                                "description": "move container",
-                                "event_type": "transport_continue",
-                                "start_boundary_id": "start",
-                                "end_boundary_id": "end",
-                            }
-                        ],
-                    }
-                ],
-            }
-        )
-
-
-@pytest.mark.parametrize("negative_time", [-1e-9, -0.01])
-def test_models_reject_negative_timestamp_ends_even_inside_comparison_tolerance(
-    negative_time: float,
-):
-    """End fields share the same nonnegative time domain as start fields."""
-    with pytest.raises(ValidationError):
-        CoarsePlan.model_validate(
-            {
-                "task_description": "move container",
-                "actions": [
-                    {
-                        "action_index": 0,
-                        "start": 0.0,
-                        "end": negative_time,
-                        "description": "move container",
-                        "event_type": "transport",
-                    }
-                ],
-            }
-        )
-    with pytest.raises(ValidationError):
-        BoundaryPlan.model_validate(
+            },
+            ("actions", 0, "boundary_points", 0, "time"),
+        ),
+        (
+            BoundaryPlan,
             {
                 "task_description": "move container",
                 "actions": [
@@ -1214,7 +1589,7 @@ def test_models_reject_negative_timestamp_ends_even_inside_comparison_tolerance(
                             {
                                 "segment_index": 0,
                                 "start": 0.0,
-                                "end": negative_time,
+                                "end": 1.0,
                                 "description": "move container",
                                 "event_type": "transport_continue",
                                 "start_boundary_id": "start",
@@ -1223,8 +1598,84 @@ def test_models_reject_negative_timestamp_ends_even_inside_comparison_tolerance(
                         ],
                     }
                 ],
-            }
-        )
+            },
+            ("actions", 0, "fine_segments", 0, "start"),
+        ),
+    )
+    for model, legal, path in cases:
+        model.model_validate(legal)
+        invalid = copy.deepcopy(legal)
+        cursor: Any = invalid
+        for part in path[:-1]:
+            cursor = cursor[part]
+        cursor[path[-1]] = negative_time
+        with pytest.raises(ValidationError) as error:
+            model.model_validate(invalid)
+        assert [item["loc"] for item in error.value.errors()] == [path]
+
+
+@pytest.mark.parametrize("negative_time", [-1e-9, -0.01])
+def test_models_reject_negative_timestamp_ends_even_inside_comparison_tolerance(
+    negative_time: float,
+):
+    """End fields share the same nonnegative time domain as start fields."""
+    cases = (
+        (
+            CoarsePlan,
+            {
+                "task_description": "move container",
+                "entity_candidates": _entity_candidates(),
+                "actions": [
+                    {
+                        "action_index": 0,
+                        "start": 0.0,
+                        "end": 1.0,
+                        "description": "move container",
+                        "event_type": "transport",
+                    }
+                ],
+            },
+            ("actions", 0, "end"),
+        ),
+        (
+            BoundaryPlan,
+            {
+                "task_description": "move container",
+                "actions": [
+                    {
+                        "action_index": 0,
+                        "start": 0.0,
+                        "end": 1.0,
+                        "description": "move container",
+                        "event_type": "transport",
+                        "boundary_points": [],
+                        "fine_segments": [
+                            {
+                                "segment_index": 0,
+                                "start": 0.0,
+                                "end": 1.0,
+                                "description": "move container",
+                                "event_type": "transport_continue",
+                                "start_boundary_id": "start",
+                                "end_boundary_id": "end",
+                            }
+                        ],
+                    }
+                ],
+            },
+            ("actions", 0, "fine_segments", 0, "end"),
+        ),
+    )
+    for model, legal, path in cases:
+        model.model_validate(legal)
+        invalid = copy.deepcopy(legal)
+        cursor: Any = invalid
+        for part in path[:-1]:
+            cursor = cursor[part]
+        cursor[path[-1]] = negative_time
+        with pytest.raises(ValidationError) as error:
+            model.model_validate(invalid)
+        assert [item["loc"] for item in error.value.errors()] == [path]
 
 
 def test_coarse_plan_reports_all_coverage_index_and_duration_issues():
@@ -1232,6 +1683,7 @@ def test_coarse_plan_reports_all_coverage_index_and_duration_issues():
     plan = CoarsePlan.model_validate(
         {
             "task_description": "move container",
+            "entity_candidates": _entity_candidates(),
             "actions": [
                 {
                     "action_index": 1,
@@ -1255,14 +1707,13 @@ def test_coarse_plan_reports_all_coverage_index_and_duration_issues():
         validate_coarse_plan(plan, duration=1.0)
 
     assert [issue.code for issue in error.value.issues] == [
-        "ACTION_START_NOT_ZERO",
         "DUPLICATE_ACTION_INDEX",
         "ACTION_INDEX_NOT_ORDERED",
         "ACTION_NONPOSITIVE_DURATION",
+        "ACTION_OUTSIDE_VIDEO",
         "ACTION_OVERLAP",
-        "ACTION_END_MISMATCH_DURATION",
     ]
-    assert error.value.issues[0].path == ("actions", 0, "start")
+    assert error.value.issues[0].path == ("actions", 1, "action_index")
 
 
 def test_boundary_plan_rejects_gap_and_invalid_reference(
@@ -1378,9 +1829,9 @@ def test_boundary_plan_rejects_noncontiguous_parent_actions_and_long_segments(
 
 @pytest.mark.parametrize(
     ("replacement_start", "expected_code"),
-    [(1.11, "ACTION_GAP"), (0.89, "ACTION_OVERLAP")],
+    [(0.89, "ACTION_OVERLAP")],
 )
-def test_boundary_plan_rejects_cross_action_gaps_and_overlaps_beyond_tolerance(
+def test_boundary_plan_rejects_cross_action_overlaps_beyond_tolerance(
     valid_boundary_plan: BoundaryPlan,
     coarse_plan: CoarsePlan,
     replacement_start: float,
@@ -1398,7 +1849,7 @@ def test_boundary_plan_rejects_cross_action_gaps_and_overlaps_beyond_tolerance(
 
 @pytest.mark.parametrize(
     ("delta", "expected_code"),
-    [(0.000001, "ACTION_GAP"), (-0.000001, "ACTION_OVERLAP")],
+    [(-0.000001, "ACTION_OVERLAP")],
 )
 def test_coarse_plan_rejects_real_topology_errors_inside_legacy_tolerance(
     coarse_plan: CoarsePlan, delta: float, expected_code: str
@@ -1414,16 +1865,20 @@ def test_coarse_plan_rejects_real_topology_errors_inside_legacy_tolerance(
     assert broken.actions[1].start == 1.0 + delta
 
 
-def test_coarse_plan_rejects_small_video_endpoint_drift(coarse_plan: CoarsePlan):
+def test_coarse_plan_accepts_sparse_endpoints_but_rejects_out_of_video(
+    coarse_plan: CoarsePlan,
+):
+    sparse = copy.deepcopy(coarse_plan)
+    sparse.actions[-1].end = 1.9
+    validate_coarse_plan(sparse, duration=2.0, tolerance=0.05)
+
     broken = copy.deepcopy(coarse_plan)
-    broken.actions[-1].end = 1.999999
+    broken.actions[-1].end = 2.2
 
     with pytest.raises(TemporalValidationError) as error:
         validate_coarse_plan(broken, duration=2.0, tolerance=0.05)
 
-    assert "ACTION_END_MISMATCH_DURATION" in {
-        issue.code for issue in error.value.issues
-    }
+    assert "ACTION_OUTSIDE_VIDEO" in {issue.code for issue in error.value.issues}
 
 
 def test_boundary_plan_rejects_small_segment_gap_inside_legacy_tolerance(
@@ -1443,6 +1898,7 @@ def test_topology_allows_only_binary_arithmetic_noise_without_modifying_values()
     plan = CoarsePlan.model_validate(
         {
             "task_description": "move container",
+            "entity_candidates": _entity_candidates(),
             "actions": [
                 {
                     "action_index": 0,
@@ -1543,10 +1999,11 @@ def test_boundary_plan_requires_fine_segments_from_adjacent_boundary_points(
 @pytest.mark.parametrize(
     "description",
     [
-        "hand places the apple into container",
-        "Right hand places the apple",
-        "right hand moves this object through an excessively wordy visible action phrase",
-        "right hand " + "moves " * 10,
+        " leading whitespace kept",
+        "trailing whitespace kept ",
+        "line one\nline two",
+        "carriage\rreturn",
+        "right hand " + "moves the visible red container " * 8,
     ],
 )
 def test_boundary_plan_rejects_fine_descriptions_outside_export_contract(
@@ -1566,9 +2023,31 @@ def test_boundary_plan_rejects_fine_descriptions_outside_export_contract(
     }
 
 
+@pytest.mark.parametrize(
+    "description",
+    [
+        "hand places the apple into container",
+        "Right hand places the apple",
+        "right hand moves this object through an excessively wordy visible action phrase",
+        "The wicker basket becomes hidden behind the moving light blue board.",
+    ],
+)
+def test_boundary_plan_accepts_las_reference_style_descriptions(
+    valid_boundary_plan: BoundaryPlan,
+    coarse_plan: CoarsePlan,
+    description: str,
+) -> None:
+    """Official-LAS-style captions (mixed case, free subject, >10 words) pass."""
+    accepted = copy.deepcopy(valid_boundary_plan)
+    accepted.actions[0].fine_segments[0].description = description
+
+    validate_boundary_plan(accepted, coarse_plan)
+
+
 def _repairable_boundary_output() -> tuple[dict[str, Any], dict[str, Any]]:
     coarse = {
         "task_description": "move the red container",
+        "entity_candidates": _entity_candidates(),
         "actions": [
             {
                 "action_index": 0,
@@ -1711,7 +2190,8 @@ def test_boundary_topology_fallback_uses_valid_parent_caption_for_invalid_fine_c
     """Observed repair output may reuse its validated visible parent phase safely."""
     coarse, boundary = _repairable_boundary_output()
     boundary["actions"][0]["fine_segments"][0]["description"] = (
-        "hand moves red container"
+        "right hand moves the red container "
+        + "past the visible shelf edge " * 8
     )
 
     repaired = DEFAULT_OUTPUT_SCHEMAS.sanitize(
@@ -1733,13 +2213,12 @@ def test_boundary_topology_fallback_uses_valid_parent_caption_for_invalid_fine_c
 
 
 def test_boundary_topology_fallback_rejects_invalid_fine_and_parent_captions():
-    """Fallback must not manufacture an actor when no valid visible caption exists."""
+    """Fallback must not manufacture a caption when no valid one exists."""
     coarse, boundary = _repairable_boundary_output()
-    coarse["actions"][0]["description"] = "hand moves red container"
-    boundary["actions"][0]["description"] = "hand moves red container"
-    boundary["actions"][0]["fine_segments"][0]["description"] = (
-        "hand moves red container"
-    )
+    oversized = "right hand moves the red container " + "far across the table " * 12
+    coarse["actions"][0]["description"] = oversized
+    boundary["actions"][0]["description"] = oversized
+    boundary["actions"][0]["fine_segments"][0]["description"] = oversized
 
     repaired = DEFAULT_OUTPUT_SCHEMAS.sanitize(
         "BoundaryPlan",

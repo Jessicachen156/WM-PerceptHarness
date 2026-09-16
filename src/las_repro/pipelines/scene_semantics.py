@@ -6,11 +6,11 @@ import math
 import re
 from enum import StrEnum
 from collections.abc import Mapping, Sequence
-from typing import Annotated, Any
+from typing import Annotated, Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
-from .validators import Actor, TemporalIssue, TemporalValidationError
+from .validators import Actor, Skill, TemporalIssue, TemporalValidationError
 
 
 Timestamp = Annotated[float, Field(ge=0, strict=True, allow_inf_nan=False)]
@@ -23,26 +23,8 @@ ObjectId = Annotated[
 ]
 
 
-class SceneEventType(StrEnum):
-    MOVE = "move"
-    TRANSPORT = "transport"
-    GRASP = "grasp"
-    REACH = "reach"
-    RELEASE = "release"
-    LIFT = "lift"
-    PLACE = "place"
-    APPROACH = "approach"
-    CONTACT = "contact"
-    PUSH = "push"
-    PULL = "pull"
-    ROTATE = "rotate"
-    STOP = "stop"
-    AUTONOMOUS_MOTION = "autonomous_motion"
-    STATE_CHANGE = "state_change"
-    OCCLUSION_ENTER = "occlusion_enter"
-    OCCLUDED = "occluded"
-    OCCLUSION_EXIT = "occlusion_exit"
-    UNKNOWN = "unknown"
+SceneEventType = Skill
+"""Scene events and fine skills share the official LAS vocabulary."""
 
 
 class OutcomeStatus(StrEnum):
@@ -93,10 +75,49 @@ class SceneSemanticEvent(_SceneModel):
     confidence: Confidence
 
 
+class SceneLocation(_SceneModel):
+    object_id: ObjectId
+    location: str
+    start: Timestamp
+    end: Timestamp
+    visual_evidence: str
+    confidence: Confidence
+    evidence_mode: Literal["hybrid"]
+    source_track_ids: list[str]
+    source_keyframe_ids: list[str]
+    branch: Literal["scene"]
+    model_stage: Literal["scene_semantics"]
+    source_segment_indices: list[Index]
+    repair_history: list[Literal["initial", "repair"]]
+    review_status: Literal["not_required"]
+
+
+class SceneRelation(_SceneModel):
+    subject_object_id: ObjectId
+    relation: Literal["left_of", "right_of", "above", "below", "in_front_of",
+                      "behind", "inside", "on", "overlapping", "near",
+                      "occluding", "unknown"]
+    object_object_id: ObjectId
+    start: Timestamp
+    end: Timestamp
+    visual_evidence: str
+    confidence: Confidence
+    evidence_mode: Literal["hybrid"]
+    source_track_ids: list[str]
+    source_keyframe_ids: list[str]
+    branch: Literal["scene"]
+    model_stage: Literal["scene_semantics"]
+    source_segment_indices: list[Index]
+    repair_history: list[Literal["initial", "repair"]]
+    review_status: Literal["not_required"]
+
+
 class SceneSemantics(_SceneModel):
     objects: list[SceneObject]
     initial_state: list[SceneState]
     final_state: list[SceneState]
+    locations: list[SceneLocation]
+    relations: list[SceneRelation]
     outcome: SceneOutcome
     semantic_events: list[SceneSemanticEvent]
 
@@ -138,6 +159,7 @@ def validate_scene_semantics(
     *,
     require_observed_content: bool = False,
     required_object_ids: tuple[str, ...] = (),
+    spatial_evidence_available: bool = False,
 ) -> None:
     """Validate references and time bounds while allowing event overlap."""
     if isinstance(duration, bool) or not isinstance(duration, (int, float)):
@@ -214,6 +236,32 @@ def validate_scene_semantics(
                 )
             seen.add(state.object_id)
     previous_start: float | None = None
+    for collection_name in ("locations", "relations"):
+        previous_key = None
+        for index, row in enumerate(getattr(result, collection_name)):
+            refs = ([row.object_id] if collection_name == "locations" else
+                    [row.subject_object_id, row.object_object_id])
+            key = (row.start, row.end, *refs)
+            checks = (
+                (not spatial_evidence_available, "EVIDENCE_UNAVAILABLE"),
+                (not 0 <= row.start < row.end <= duration, "TIME_BOUNDS_INVALID"),
+                (not set(refs) <= object_ids, "OBJECT_REFERENCE_INVALID"),
+                (previous_key is not None and key < previous_key, "ORDER_INVALID"),
+                (not row.source_track_ids, "TRACKS_INVALID"),
+                (row.repair_history not in (["initial"], ["initial", "repair"],
+                                            ["initial", "repair", "repair"]),
+                 "PROVENANCE_INVALID"),
+            )
+            failed_codes = [code for failed, code in checks if failed]
+            if failed_codes:
+                for code in ("SCENE_SPATIAL_INVALID", *(
+                    "SCENE_SPATIAL_" + suffix for suffix in failed_codes
+                )):
+                    issues.append(TemporalIssue(
+                        code, (collection_name, index),
+                        "spatial facts require ordered supported references",
+                    ))
+            previous_key = key
     for index, event in enumerate(result.semantic_events):
         path = ("semantic_events", index)
         if event.event_index != index:
@@ -267,6 +315,8 @@ def unavailable_scene_semantics() -> dict[str, object]:
         "objects": [],
         "initial_state": [],
         "final_state": [],
+        "locations": [],
+        "relations": [],
         "outcome": {
             "status": "unknown",
             "description": "scene semantics unavailable",

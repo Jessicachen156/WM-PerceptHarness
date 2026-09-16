@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import math
 import os
+import re
 import signal
 import sqlite3
 import stat
@@ -20,6 +21,7 @@ from typing import Any, Iterator
 
 from .domain import InferenceJob, InferenceJobSpec, InferenceStatus, TaskRecord, TaskStatus
 from .model_alias import DEFAULT_MODEL_ALIAS, validate_model_alias
+from . import semantic_cache as semantic
 
 
 class StoreError(RuntimeError):
@@ -32,6 +34,10 @@ class InvalidTransition(StoreError):
 
 class WorkerMismatch(StoreError):
     """Raised when a worker attempts to mutate another worker's lease."""
+
+
+class SemanticCachePublicationError(StoreError):
+    """Cache write failed; transaction rolled back and job completion may retry."""
 
 
 class DuplicateInferenceJob(StoreError):
@@ -48,6 +54,33 @@ _DATABASE_FILE_ERROR = "database file must be an owner-only regular file"
 _DATABASE_SIDECAR_ERROR = "database sidecar must be an owner-only regular file"
 _LEGACY_MODEL_MIGRATION_BATCH_SIZE = 16
 _MAX_LEGACY_TASK_PAYLOAD_BYTES = 1_048_576
+_MAX_JOB_METRICS_BYTES = 4096
+_JOB_METRIC_KEYS = frozenset(
+    {
+        "inference_seconds",
+        "input_tokens",
+        "output_tokens",
+        "peak_allocated_bytes",
+        "processed_frames",
+        "execution_chunk_frames",
+        "entity_prompts",
+        "track_count",
+        "cache_hit",
+        "oom_retry",
+        "semantic_cache_hit",
+        "semantic_cache_published",
+        "semantic_cache_key",
+        "semantic_cache_result_sha256",
+    }
+)
+_JOB_BOOLEAN_METRIC_KEYS = frozenset({
+    "cache_hit", "oom_retry", "semantic_cache_hit", "semantic_cache_published",
+})
+_JOB_DIGEST_METRIC_KEYS = frozenset({"semantic_cache_key", "semantic_cache_result_sha256"})
+_JOB_INTEGER_METRIC_KEYS = (
+    _JOB_METRIC_KEYS - _JOB_BOOLEAN_METRIC_KEYS - _JOB_DIGEST_METRIC_KEYS
+    - {"inference_seconds"}
+)
 
 
 class SQLiteTaskStore:
@@ -170,7 +203,19 @@ class SQLiteTaskStore:
                     affinity_worker_id TEXT,
                     affinity_fallback_at REAL,
                     completed_by TEXT,
+                    started_at REAL,
+                    finished_at REAL,
+                    metrics TEXT,
                     UNIQUE(task_id, stage, ordinal)
+                );
+
+                CREATE TABLE IF NOT EXISTS semantic_results (
+                    cache_key TEXT PRIMARY KEY,
+                    schema_version INTEGER NOT NULL,
+                    identity_json TEXT NOT NULL,
+                    result_json TEXT NOT NULL,
+                    result_sha256 TEXT NOT NULL,
+                    created_at REAL NOT NULL
                 );
 
                 CREATE INDEX IF NOT EXISTS idx_tasks_claim
@@ -195,6 +240,15 @@ class SQLiteTaskStore:
                         f"NOT NULL DEFAULT '{DEFAULT_MODEL_ALIAS}'"
                     )
                     _backfill_legacy_job_model_aliases(connection)
+                for column, declaration in (
+                    ("started_at", "REAL"),
+                    ("finished_at", "REAL"),
+                    ("metrics", "TEXT"),
+                ):
+                    if column not in columns:
+                        connection.execute(
+                            f"ALTER TABLE inference_jobs ADD COLUMN {column} {declaration}"
+                        )
                 connection.execute(
                     """
                     CREATE INDEX IF NOT EXISTS idx_jobs_model_claim
@@ -218,7 +272,19 @@ class SQLiteTaskStore:
                         attempt = attempt + 1,
                         result = NULL,
                         error = ?,
-                        completed_by = NULL
+                        completed_by = NULL,
+                        finished_at = COALESCE(
+                            finished_at,
+                            MAX(
+                                inference_jobs.updated_at,
+                                (
+                                    SELECT parent.updated_at
+                                    FROM tasks AS parent
+                                    WHERE parent.task_id = inference_jobs.task_id
+                                )
+                            )
+                        ),
+                        metrics = NULL
                     WHERE status IN (?, ?)
                       AND EXISTS (
                           SELECT 1
@@ -244,7 +310,9 @@ class SQLiteTaskStore:
                     UPDATE inference_jobs
                     SET status = ?, lease_until = NULL, worker_id = NULL,
                         attempt = attempt + 1, result = NULL, error = ?,
-                        completed_by = NULL
+                        completed_by = NULL,
+                        finished_at = COALESCE(finished_at, updated_at),
+                        metrics = NULL
                     WHERE status IN (?, ?)
                       AND NOT EXISTS (
                           SELECT 1
@@ -432,13 +500,18 @@ class SQLiteTaskStore:
             connection.execute("BEGIN IMMEDIATE")
             try:
                 parent = _required_row(connection, "tasks", "task_id", task_id)
-                model_name = _task_model_alias(parent["payload"])
+                task_model_name = _task_model_alias(parent["payload"])
                 if parent["status"] in {
                     TaskStatus.COMPLETED.value,
                     TaskStatus.FAILED.value,
                 }:
                     raise InvalidTransition("cannot create inference jobs for a terminal task")
                 for spec, absolute_fallback_at, fallback_seconds in definitions:
+                    model_name = (
+                        task_model_name
+                        if spec.model_name is None
+                        else validate_model_alias(spec.model_name)
+                    )
                     payload_json = _json_dump(spec.payload)
                     existing = connection.execute(
                         "SELECT * FROM inference_jobs WHERE task_id = ? AND stage = ? AND ordinal = ?",
@@ -530,6 +603,10 @@ class SQLiteTaskStore:
         worker_id: str,
         attempt: int,
         now: float | None = None,
+        metrics: Mapping[str, Any] | None = None,
+        semantic_publication: tuple[
+            semantic.SemanticIdentity, semantic.ResultValidator
+        ] | None = None,
     ) -> InferenceJob:
         row = self._finish(
             table="inference_jobs",
@@ -542,8 +619,79 @@ class SQLiteTaskStore:
             error=None,
             now=self._now(now),
             completed_by=worker_id,
+            metrics=metrics,
+            semantic_publication=semantic_publication,
         )
         return _job_from_row(row)
+
+    def lookup_semantic_result(
+        self, identity: semantic.SemanticIdentity, validate: semantic.ResultValidator
+    ) -> dict[str, Any] | None:
+        """Read only; corruption is repaired only by a fenced completion."""
+        try:
+            with self._connect() as connection:
+                return semantic.decode_entry(
+                    self._semantic_row(connection, identity.key), identity, validate
+                )
+        except (sqlite3.Error, StoreError, OSError):
+            return None
+
+    @staticmethod
+    def _semantic_row(
+        connection: sqlite3.Connection, key: str
+    ) -> sqlite3.Row | None:
+        # Check byte bounds in SQLite before materializing potentially damaged data.
+        return connection.execute(
+            """SELECT cache_key, schema_version, result_sha256, created_at,
+                CASE WHEN length(CAST(identity_json AS BLOB)) + length(CAST(result_json AS BLOB)) <= ?
+                    THEN identity_json END AS identity_json,
+                CASE WHEN length(CAST(identity_json AS BLOB)) + length(CAST(result_json AS BLOB)) <= ?
+                    THEN result_json END AS result_json
+                FROM semantic_results WHERE cache_key = ?""",
+            (semantic.MAX_ENTRY_BYTES, semantic.MAX_ENTRY_BYTES, key),
+        ).fetchone()
+
+    def _publish_semantic_result(
+        self,
+        connection: sqlite3.Connection,
+        identity: semantic.SemanticIdentity,
+        result: Mapping[str, Any],
+        validate: semantic.ResultValidator,
+        now: float,
+    ) -> bool:
+        """Called only inside the current job's owner/attempt-fenced transaction."""
+        encoded = semantic.canonical_json(result)
+        if (semantic.sha256(identity.json) != identity.key
+                or len(identity.json.encode()) + len(encoded.encode()) > semantic.MAX_ENTRY_BYTES
+                or not validate(result)):
+            return False
+        existing = self._semantic_row(connection, identity.key)
+        if semantic.decode_entry(existing, identity, validate) is not None:
+            return False
+        connection.execute("DELETE FROM semantic_results WHERE cache_key = ?", (identity.key,))
+        connection.execute(
+            """INSERT INTO semantic_results
+                (cache_key, schema_version, identity_json, result_json, result_sha256, created_at)
+                VALUES (?, ?, ?, ?, ?, ?)""",
+            (identity.key, semantic.CACHE_SCHEMA_VERSION, identity.json,
+             encoded, semantic.sha256(encoded), now),
+        )
+        while True:
+            count, total = connection.execute(
+                """SELECT COUNT(*), COALESCE(SUM(
+                    length(CAST(identity_json AS BLOB)) + length(CAST(result_json AS BLOB))
+                ), 0) FROM semantic_results"""
+            ).fetchone()
+            if count <= semantic.MAX_ENTRIES and total <= semantic.MAX_TOTAL_BYTES:
+                break
+            connection.execute(
+                """DELETE FROM semantic_results WHERE cache_key = (
+                    SELECT cache_key FROM semantic_results ORDER BY created_at, cache_key LIMIT 1
+                )"""
+            )
+        return connection.execute(
+            "SELECT 1 FROM semantic_results WHERE cache_key = ?", (identity.key,)
+        ).fetchone() is not None
 
     def heartbeat_inference_job(
         self,
@@ -565,6 +713,30 @@ class SQLiteTaskStore:
             now=self._now(now),
         )
         return _job_from_row(row)
+
+    @contextmanager
+    def inference_job_lease_guard(
+        self,
+        job_id: str,
+        worker_id: str,
+        *,
+        attempt: int,
+    ) -> Iterator[None]:
+        """Hold current generation ownership across one short external commit."""
+        attempt = _lease_attempt(attempt)
+        with self._connect() as connection:
+            connection.execute("BEGIN IMMEDIATE")
+            try:
+                current = _required_row(
+                    connection, "inference_jobs", "job_id", job_id
+                )
+                _require_running_owner(current, worker_id, attempt)
+                yield
+            except BaseException:
+                connection.rollback()
+                raise
+            else:
+                connection.commit()
 
     def expire_inference_job_lease(
         self,
@@ -666,6 +838,12 @@ class SQLiteTaskStore:
             if affinity
             else f"created_at, {identifier}"
         )
+        started_at_sql = (
+            ", started_at = COALESCE(started_at, ?)"
+            if table == "inference_jobs"
+            else ""
+        )
+        started_at_params = (now,) if table == "inference_jobs" else ()
         with self._connect() as connection:
             connection.execute("BEGIN IMMEDIATE")
             try:
@@ -694,7 +872,8 @@ class SQLiteTaskStore:
                 changed = connection.execute(
                     f"""
                     UPDATE {table}
-                    SET status = ?, worker_id = ?, lease_until = ?, attempt = attempt + 1, updated_at = ?
+                    SET status = ?, worker_id = ?, lease_until = ?,
+                        attempt = attempt + 1, updated_at = ?{started_at_sql}
                     WHERE {identifier} = ?
                       AND (status = ? OR (status = ? AND lease_until <= ?))
                       {model_sql}
@@ -706,6 +885,7 @@ class SQLiteTaskStore:
                         worker_id,
                         lease_until,
                         now,
+                        *started_at_params,
                         row[identifier],
                         "PENDING",
                         "RUNNING",
@@ -780,21 +960,62 @@ class SQLiteTaskStore:
         error: str | None,
         now: float,
         completed_by: str | None = None,
+        metrics: Mapping[str, Any] | None = None,
+        semantic_publication: tuple[
+            semantic.SemanticIdentity, semantic.ResultValidator
+        ] | None = None,
     ) -> sqlite3.Row:
         result_json = _json_dump(result) if result is not None else None
         error_json = _json_dump(error) if error is not None else None
+        metrics_json = _validated_job_metrics_json(metrics)
         attempt = _lease_attempt(attempt)
-        completed_by_sql = ", completed_by = ?" if table == "inference_jobs" else ""
-        params: tuple[Any, ...] = (status, now, result_json, error_json, *(() if table == "tasks" else (completed_by,)), value)
+        job_finish_sql = (
+            ", completed_by = ?, finished_at = ?, metrics = ?"
+            if table == "inference_jobs"
+            else ""
+        )
+        params: tuple[Any, ...] = (
+            status,
+            now,
+            result_json,
+            error_json,
+            *(
+                ()
+                if table == "tasks"
+                else (completed_by, now, metrics_json)
+            ),
+            value,
+        )
         with self._connect() as connection:
             connection.execute("BEGIN IMMEDIATE")
             try:
                 current = _required_row(connection, table, identifier, value)
                 _require_running_owner(current, worker_id, attempt)
+                if semantic_publication is not None:
+                    identity, validate = semantic_publication
+                    try:
+                        published = self._publish_semantic_result(
+                            connection, identity, result, validate, now
+                        )
+                    except sqlite3.Error:
+                        raise SemanticCachePublicationError(
+                            "semantic cache publication failed"
+                        ) from None
+                    updated_metrics = dict(metrics or {})
+                    updated_metrics["semantic_cache_published"] = published
+                    # The digest always describes THIS job, including a losing publisher.
+                    updated_metrics["semantic_cache_result_sha256"] = semantic.sha256(
+                        semantic.canonical_json(result)
+                    )
+                    params = (
+                        status, now, result_json, error_json, completed_by, now,
+                        _validated_job_metrics_json(updated_metrics), value,
+                    )
                 changed = connection.execute(
                     f"""
                     UPDATE {table}
-                    SET status = ?, updated_at = ?, lease_until = NULL, result = ?, error = ?{completed_by_sql}
+                    SET status = ?, updated_at = ?, lease_until = NULL,
+                        result = ?, error = ?{job_finish_sql}
                     WHERE {identifier} = ? AND status = 'RUNNING'
                       AND worker_id = ? AND attempt = ?
                     """,
@@ -808,13 +1029,15 @@ class SQLiteTaskStore:
                         UPDATE inference_jobs
                         SET status = ?, updated_at = ?, lease_until = NULL,
                             worker_id = NULL, attempt = attempt + 1,
-                            result = NULL, error = ?, completed_by = NULL
+                            result = NULL, error = ?, completed_by = NULL,
+                            finished_at = ?, metrics = NULL
                         WHERE task_id = ? AND status IN (?, ?)
                         """,
                         (
                             InferenceStatus.FAILED.value,
                             now,
                             _json_dump("parent task is terminal"),
+                            now,
                             value,
                             InferenceStatus.PENDING.value,
                             InferenceStatus.RUNNING.value,
@@ -1335,6 +1558,41 @@ def _json_load(value: str | None) -> Any:
     return json.loads(value) if value is not None else None
 
 
+def _validated_job_metrics_json(metrics: Mapping[str, Any] | None) -> str | None:
+    if metrics is None:
+        return None
+    if not isinstance(metrics, Mapping):
+        raise TypeError("metrics must be a mapping or None")
+    values = dict(metrics)
+    unknown = values.keys() - _JOB_METRIC_KEYS
+    if unknown:
+        raise ValueError("metrics contain unknown keys")
+    if "inference_seconds" in values:
+        duration = values["inference_seconds"]
+        if type(duration) is not float or not math.isfinite(duration) or duration < 0:
+            raise ValueError("metrics inference_seconds must be a finite non-negative float")
+    for key in _JOB_INTEGER_METRIC_KEYS & values.keys():
+        value = values[key]
+        if type(value) is not int or value < 0:
+            raise ValueError(f"metrics {key} must be a non-negative integer")
+    for key in _JOB_BOOLEAN_METRIC_KEYS & values.keys():
+        if type(values[key]) is not bool:
+            raise ValueError(f"metrics {key} must be a boolean")
+    for key in _JOB_DIGEST_METRIC_KEYS & values.keys():
+        if (not isinstance(values[key], str)
+                or re.fullmatch(r"[0-9a-f]{64}", values[key]) is None):
+            raise ValueError(f"metrics {key} must be a lowercase SHA256 digest")
+    encoded = _json_dump(values)
+    if len(encoded.encode("utf-8")) > _MAX_JOB_METRICS_BYTES:
+        raise ValueError("metrics canonical JSON exceeds 4096 bytes")
+    return encoded
+
+
+def validate_inference_job_metrics(metrics: Mapping[str, Any] | None) -> None:
+    """Validate completion metrics with the store's canonical Task-1 rules."""
+    _validated_job_metrics_json(metrics)
+
+
 def _task_model_alias(payload_json: str) -> str:
     try:
         payload = _json_load(payload_json)
@@ -1449,4 +1707,7 @@ def _job_from_row(row: sqlite3.Row) -> InferenceJob:
         affinity_worker_id=row["affinity_worker_id"],
         affinity_fallback_at=row["affinity_fallback_at"],
         completed_by=row["completed_by"],
+        started_at=row["started_at"],
+        finished_at=row["finished_at"],
+        metrics=_json_load(row["metrics"]),
     )
