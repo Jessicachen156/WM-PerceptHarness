@@ -18,7 +18,7 @@ from .runner import (
     run_batch,
 )
 
-_BACKENDS = ("doubao", "qwen", "fake")
+_BACKENDS = ("openai", "fake")
 
 
 def main(argv: Sequence[str] | None = None) -> int:
@@ -77,20 +77,15 @@ def _parser() -> argparse.ArgumentParser:
         help="free-form query for general_video_captioning",
     )
     evaluate.add_argument(
-        "--device",
-        default=None,
-        help="CUDA device ordinal for the qwen backend (default: first of LAS_GPU_DEVICES)",
-    )
-    evaluate.add_argument(
         "--cv",
         default=None,
         choices=("disabled", "fake", "sam31"),
-        help="CV evidence provider (default: LAS_CV_PROVIDER from the environment)",
+        help="CV evidence provider (default: PERCEPT_CV_PROVIDER from the environment)",
     )
     evaluate.add_argument(
         "--cv-device",
         default=None,
-        help="CUDA device ordinal for the sam31 provider (default: LAS_CV_DEVICE)",
+        help="CUDA device ordinal for the sam31 provider (default: PERCEPT_CV_DEVICE)",
     )
     return parser
 
@@ -119,7 +114,7 @@ def _eval(arguments: argparse.Namespace) -> int:
 
     cv_provider = arguments.cv if arguments.cv is not None else settings.cv_provider
     if cv_provider != settings.cv_provider:
-        # Settings validates sam31 paths only when LAS_CV_PROVIDER=sam31, so
+        # Settings validates sam31 paths only when PERCEPT_CV_PROVIDER=sam31, so
         # re-validate with the CLI override applied.
         try:
             settings = settings.model_copy(update={"cv_provider": cv_provider})
@@ -164,57 +159,41 @@ def _load_backend(arguments: argparse.Namespace, settings: Settings):
         from .models.fake import FakeVideoModel
 
         alias = arguments.model or _single_alias(
-            settings.model_registry, "LAS_MODEL_REGISTRY"
+            settings.model_registry, "PERCEPT_MODEL_REGISTRY"
         )
         return FakeVideoModel(), alias, lambda: None
 
-    if backend == "doubao":
-        if settings.ark_api_key is None or not settings.ark_api_key.get_secret_value().strip():
-            raise ValueError("LAS_ARK_API_KEY is not configured")
-        if not settings.ark_model_registry:
-            raise ValueError("LAS_ARK_MODEL_REGISTRY is empty")
-        from .models.ark import ArkVideoModel
+    if backend == "openai":
+        if settings.openai_api_key is None or not settings.openai_api_key.get_secret_value().strip():
+            raise ValueError("PERCEPT_OPENAI_API_KEY is not configured")
+        if not settings.openai_base_url:
+            raise ValueError("PERCEPT_OPENAI_BASE_URL is not configured")
+        registry = settings.openai_model_aliases
+        if not registry:
+            raise ValueError(
+                "PERCEPT_OPENAI_MODEL (or PERCEPT_OPENAI_MODEL_REGISTRY) is not configured"
+            )
+        alias = arguments.model or _single_alias(registry, "PERCEPT_OPENAI_MODEL_REGISTRY")
+        if alias not in registry:
+            raise KeyError(
+                f"model alias {alias!r} is absent from PERCEPT_OPENAI_MODEL_REGISTRY"
+            )
+        from .models.openai_compat import OpenAICompatVideoModel
 
-        alias = arguments.model or _single_alias(
-            settings.ark_model_registry, "LAS_ARK_MODEL_REGISTRY"
-        )
-        if alias not in settings.ark_model_registry:
-            raise KeyError(f"model alias {alias!r} is absent from LAS_ARK_MODEL_REGISTRY")
-        model = ArkVideoModel(
-            api_key=settings.ark_api_key.get_secret_value(),
-            model_registry=settings.ark_model_registry,
-            timeout_seconds=settings.ark_timeout_seconds,
-            max_frames=settings.ark_max_frames,
-            max_request_bytes=settings.ark_max_request_bytes,
-            max_output_chars=settings.ark_max_output_chars,
-            proxy=settings.ark_proxy.get_secret_value() if settings.ark_proxy else None,
+        model = OpenAICompatVideoModel(
+            base_url=settings.openai_base_url,
+            api_key=settings.openai_api_key.get_secret_value(),
+            model_registry=registry,
+            response_format=settings.openai_response_format,
+            extra_body=settings.openai_extra_body,
+            extra_headers=settings.openai_extra_headers,
+            timeout_seconds=settings.openai_timeout_seconds,
+            max_frames=settings.openai_max_frames,
+            max_request_bytes=settings.openai_max_request_bytes,
+            max_output_chars=settings.openai_max_output_chars,
+            proxy=settings.openai_proxy.get_secret_value() if settings.openai_proxy else None,
         )
         return model, alias, model.close
-
-    if backend == "qwen":
-        if not settings.model_registry:
-            raise ValueError("LAS_MODEL_REGISTRY is empty")
-        alias = arguments.model or _single_alias(
-            settings.model_registry, "LAS_MODEL_REGISTRY"
-        )
-        if alias not in settings.model_registry:
-            raise KeyError(f"model alias {alias!r} is absent from LAS_MODEL_REGISTRY")
-        device_ordinal = (
-            int(arguments.device)
-            if arguments.device is not None
-            else settings.gpu_devices[0]
-        )
-        os.environ.setdefault("CUDA_VISIBLE_DEVICES", "0,1,2")
-        from .models.qwen3_vl import Qwen3VLModel
-
-        model = Qwen3VLModel.load_alias(
-            alias,
-            settings.model_registry,
-            f"cuda:{device_ordinal}",
-            "auto",
-            max_output_chars=settings.max_model_output_chars,
-        )
-        return model, alias, lambda: None
 
     raise ValueError(f"unsupported backend {backend!r}")
 
