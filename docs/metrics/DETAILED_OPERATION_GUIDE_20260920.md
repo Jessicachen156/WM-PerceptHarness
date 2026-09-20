@@ -288,6 +288,8 @@ python scripts/score_dover_official.py \
 
 这些指标不应由项目方在没有权重时写一个“假入口”并声称完成。项目方提交官方来源、输入适配器和命令；运行者准备裁判模型和独立环境。
 
+本节中的外部命令是依据官方代码包中记录的固定仓库和入口整理的“调用形态”，不是本项目包装器已经在 Ali02 上完成的真实推理。首次运行必须先进入对应官方仓库执行 `python <entry>.py --help`，核对该固定 commit 的参数，再执行命令。若 `--help` 或 README 与下面示例不一致，以固定 commit 的源码为准，不自行改参数名后继续宣称严格复现。
+
 ### Instruction Following / WorldModelBench
 
 官方字段必须包含：
