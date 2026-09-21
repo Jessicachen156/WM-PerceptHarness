@@ -47,6 +47,32 @@ Motion Smoothness was already submitted and smoke-tested in the earlier PR. If t
 
 VideoPhy-2 Joint is a derived PC/SA join, not a separate metric. Include aggregate_videophy_joint.py only in the physical-metrics PR and describe it as a post-processing helper.
 
+## Strict split by FINAL_METRICS.json category
+
+If one PR must correspond exactly to one category value in FINAL_METRICS.json, use these 15 PRs instead of the eight business-level groups above:
+
+| Category | Metrics |
+|---|---|
+| technical_quality | MUSIQ / Imaging Quality |
+| video_quality | DOVER |
+| motion_quality | Motion Smoothness / AMT; Temporal Flickering |
+| motion_quantity | Dynamic Degree |
+| text_video_alignment | CLIPScore; ViCLIP / Overall Consistency |
+| instruction_completion | Instruction Following |
+| action_binding | Action Binding |
+| motion_binding | Motion Binding |
+| temporal_semantics | Motion Order Understanding |
+| action_consequence | Motion Rationality; Object Interactions |
+| physics | PhyGenEval PCA; VideoPhy-2 PC; VideoPhy-2 SA |
+| physics_specialized | Mechanics; Thermotics; Material |
+| consistency | Subject Consistency; Background Consistency |
+| reference_quality | PSNR; SSIM; LPIPS |
+| distribution_quality | FVD; FID |
+
+The eight groups above are only a reviewer-friendly business grouping. They must not be used when the review requirement is literally one FINAL_METRICS.json category per PR. In that case, use the 15-category table and create a separate branch for each row.
+
+CLIP-IQA+ and Aesthetic Quality are outside the frozen 26 and must not be added to the technical_quality PR.
+
 ## Important shared-file rule
 
 Some current files contain more than one category:
