@@ -53,7 +53,7 @@ Mechanics、Thermotics、Material 仍属于最终保留的物理专项，但按�
 
 ## 实现状态
 
-名单冻结不等于项目替调用者下载权重或运行所有外部评测。现有 PR 中已提交并完成单视频验证的是 Motion Smoothness / AMT；其余条目在 `FINAL_METRICS.json` 中分为 `prepared_for_pr`（项目已提供官方入口/预检和说明）与 `external_caller_run`（项目提供官方输入适配或结果合并，推理由调用者在官方环境执行）。这些状态都不等于本仓库已经下载权重、完成全部数据集推理或替调用者生成 prompt/首帧/GT。
+The frozen list does not mean that this project downloads every checkpoint or runs the complete future dataset. Motion Smoothness / AMT has real smoke evidence; the other 25 metrics now have a project official wrapper, with runtime_evidence=not_run_in_project_environment.
 
 ## 官方来源固定版本
 

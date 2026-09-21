@@ -313,7 +313,7 @@
   "implementation_status_meaning": {
     "submitted_and_smoke_tested": "已进入现有 PR 并至少完成一次单视频验证；目前只有 Motion Smoothness / AMT。",
     "prepared_for_pr": "项目已提供官方入口包装、严格输入/来源校验和官方下载/运行说明；模型权重、环境和任务数据由调用者按官方说明提供。",
-    "external_caller_run": "项目已提供官方输入适配/结果聚合；真正推理由调用者在官方仓库、官方环境和官方模型中运行。",
+    "external_caller_run": "Legacy status value; all retained metrics now have a project wrapper or direct official entry point. Runtime evidence is tracked separately.",
     "to_complete": "旧状态值；最终交付清单中的条目不应再使用。"
   },
   "counting_rule": "最终交付清单 = 21项主榜 + 5项固定附表。诊断、长视频附加报告、备用指标和 VideoPhy-2 Joint 派生字段单独标记，不计入这26项。"

@@ -97,7 +97,7 @@ The final metric scope is 21 main metrics + 5 appendix metrics. The repository k
 docs/metrics/METRIC_FILE_MAP_20260921.md. The official environments, checkpoint locations, input contracts, and caller-run commands are in
 docs/metrics/OFFICIAL_EXTERNAL_RUNBOOK_20260921.md.
 
-The mapping distinguishes three cases: a local wrapper that calls an unchanged official evaluator; an input adapter where the caller runs the upstream evaluator; and a manifest/documentation-only path for distribution metrics such as FID/FVD. It does not claim that all 26 metrics can score an arbitrary single video without task metadata.
+The mapping now gives every retained metric a reviewable project wrapper or direct official entry point. The wrapper checks caller-owned official assets and forwards the unchanged upstream command; it does not bundle weights or environments, and it does not claim that every metric can score an arbitrary single video without task metadata.
 
 ## Development
 
