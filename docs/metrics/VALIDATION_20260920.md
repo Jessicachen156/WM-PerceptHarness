@@ -50,7 +50,7 @@ Input video:
 
 Hash-verified cache files were kept outside Git in `/mnt/models/vbench-cache`. The raw official outputs and logs are outside Git:
 
-- visual run: `/root/official_video_metrics_20260918/results/vbench_visual_smoke_0582_final2/`
+- visual run: `/root/official_video_metrics_20260918/results/vbench_visual_smoke_0582_committed/`
 - semantic/diagnostic run: `/root/official_video_metrics_20260918/results/vbench_semantic_smoke_0582/`
 
 The visual run returned valid official output for:

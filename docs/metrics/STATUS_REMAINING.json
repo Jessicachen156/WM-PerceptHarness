@@ -16,7 +16,7 @@
       "metric": "musiq_imaging_quality",
       "status": "scored_unverified_runtime",
       "blocker": "Real official-source single-video smoke passed, but current host runtime is torch2.10/cu128 with numpy2/timm1.0.28/transformers5.8.1; strict VBench requirements and CUDA gate are not yet satisfied.",
-      "evidence": "/root/official_video_metrics_20260918/results/vbench_visual_smoke_0582_final2/"
+      "evidence": "/root/official_video_metrics_20260918/results/vbench_visual_smoke_0582_committed/"
     },
     {
       "metric": "dover",
@@ -37,7 +37,7 @@
       "metric": "dynamic_degree",
       "status": "scored_unverified_runtime",
       "blocker": "Real official-source single-video smoke passed, but current host runtime is torch2.10/cu128 with numpy2/timm1.0.28/transformers5.8.1; strict VBench requirements and CUDA gate are not yet satisfied.",
-      "evidence": "/root/official_video_metrics_20260918/results/vbench_visual_smoke_0582_final2/"
+      "evidence": "/root/official_video_metrics_20260918/results/vbench_visual_smoke_0582_committed/"
     },
     {
       "metric": "clip_score",
@@ -113,13 +113,13 @@
       "metric": "subject_consistency",
       "status": "scored_unverified_runtime",
       "blocker": "Real official-source single-video smoke passed, but current host runtime is torch2.10/cu128 with numpy2/timm1.0.28/transformers5.8.1; strict VBench requirements and CUDA gate are not yet satisfied.",
-      "evidence": "/root/official_video_metrics_20260918/results/vbench_visual_smoke_0582_final2/"
+      "evidence": "/root/official_video_metrics_20260918/results/vbench_visual_smoke_0582_committed/"
     },
     {
       "metric": "background_consistency",
       "status": "scored_unverified_runtime",
       "blocker": "Real official-source single-video smoke passed, but current host runtime is torch2.10/cu128 with numpy2/timm1.0.28/transformers5.8.1; strict VBench requirements and CUDA gate are not yet satisfied.",
-      "evidence": "/root/official_video_metrics_20260918/results/vbench_visual_smoke_0582_final2/"
+      "evidence": "/root/official_video_metrics_20260918/results/vbench_visual_smoke_0582_committed/"
     }
   ],
   "appendix": [
