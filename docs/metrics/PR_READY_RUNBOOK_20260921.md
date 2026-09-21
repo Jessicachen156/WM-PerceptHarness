@@ -4,6 +4,8 @@ Date: 2026-09-21
 
 This guide supersedes the old single-PR workflow. The final list is still 21 main metrics + 5 appendix metrics, but they must be proposed in separate category PRs.
 
+For directly executable final-version category commands, use docs/metrics/CATEGORY_PR_FINAL_GUIDE_20260921.md. This file is the source of truth for add, commit, push, tests, and GitHub PR creation.
+
 ## Non-negotiable PR rule
 
 One PR contains one metric category. Do not open one PR whose summary lists all 26 metrics.

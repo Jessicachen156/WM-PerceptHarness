@@ -94,7 +94,7 @@ original video timeline.
 ## Metric integration map
 
 The final metric scope is 21 main metrics + 5 appendix metrics. The repository keeps the file-to-metric mapping in
-docs/metrics/METRIC_FILE_MAP_20260921.md. The official environments, checkpoint locations, input contracts, and caller-run commands are in
+docs/metrics/METRIC_FILE_MAP_20260921.md. The directly executable category PR workflow is in docs/metrics/CATEGORY_PR_FINAL_GUIDE_20260921.md. The official environments, checkpoint locations, input contracts, and caller-run commands are in
 docs/metrics/OFFICIAL_EXTERNAL_RUNBOOK_20260921.md.
 
 The mapping now gives every retained metric a reviewable project wrapper or direct official entry point. The wrapper checks caller-owned official assets and forwards the unchanged upstream command; it does not bundle weights or environments, and it does not claim that every metric can score an arbitrary single video without task metadata.
