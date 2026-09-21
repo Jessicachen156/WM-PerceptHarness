@@ -91,6 +91,14 @@ is conservatively repaired or the video is marked failed — never silently
 dropped or relabeled. Action segments carry `start`/`end` in seconds on the
 original video timeline.
 
+## Metric integration map
+
+The final metric scope is 21 main metrics + 5 appendix metrics. The repository keeps the file-to-metric mapping in
+docs/metrics/METRIC_FILE_MAP_20260921.md. The official environments, checkpoint locations, input contracts, and caller-run commands are in
+docs/metrics/OFFICIAL_EXTERNAL_RUNBOOK_20260921.md.
+
+The mapping distinguishes three cases: a local wrapper that calls an unchanged official evaluator; an input adapter where the caller runs the upstream evaluator; and a manifest/documentation-only path for distribution metrics such as FID/FVD. It does not claim that all 26 metrics can score an arbitrary single video without task metadata.
+
 ## Development
 
 ```bash
