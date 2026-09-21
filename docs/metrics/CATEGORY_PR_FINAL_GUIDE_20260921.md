@@ -95,6 +95,33 @@ base: lindaxhy/WM-PerceptHarness:main
 
 指标：MUSIQ / Imaging Quality、DOVER。
 
+### 可直接粘贴的 PR Summary
+
+~~~markdown
+## Summary
+
+- Add the official MUSIQ / Imaging Quality and DOVER integrations.
+- MUSIQ / Imaging Quality:
+  - code: scripts/score_vbench_official.py
+  - selector: imaging_quality
+  - tests: tests/test_vbench_official_wrapper.py
+  - documentation: docs/metrics/FINAL_METRICS.md and docs/metrics/METRIC_FILE_MAP_20260921.md
+- DOVER:
+  - code: scripts/score_dover_official.py
+  - official run instructions: docs/metrics/DOVER.md
+  - tests: tests/test_dover_official_wrapper.py
+- Both wrappers validate the pinned official source and caller-provided assets, then invoke the unchanged official evaluator.
+
+## Validation
+
+- /root/metrics_pr_validation_20260919/dev-env/bin/python -m pytest -q tests/test_vbench_official_wrapper.py tests/test_dover_official_wrapper.py
+- No model weights, virtual environments, task data, or future-dataset scores are committed.
+
+## Scope
+
+This PR covers only MUSIQ / Imaging Quality and DOVER.
+~~~
+
 ~~~bash
 cd /mnt/yiyang-workspace/WM-PerceptHarness
 git switch -C pr/metrics-quality upstream/main
@@ -125,6 +152,38 @@ git push -u origin pr/metrics-quality
 ## 五、类别二：运动质量与运动幅度
 
 指标：Motion Smoothness / AMT、Temporal Flickering、Dynamic Degree。
+
+### 可直接粘贴的 PR Summary
+
+~~~markdown
+## Summary
+
+- Add the official VBench motion integrations for Motion Smoothness / AMT, Temporal Flickering, and Dynamic Degree.
+- Motion Smoothness / AMT:
+  - code: scripts/score_vbench_motion_smoothness.py
+  - tests: tests/test_vbench_motion_script.py
+  - status: preserves the previously submitted official wrapper
+- Temporal Flickering:
+  - code: scripts/score_vbench_official.py
+  - selector: temporal_flickering
+  - tests: tests/test_vbench_official_wrapper.py
+  - official requirement preserved: the static-video filter
+- Dynamic Degree:
+  - code: scripts/score_vbench_official.py
+  - selector: dynamic_degree
+  - tests: tests/test_vbench_official_wrapper.py
+  - official requirement preserved: the RAFT checkpoint
+- Shared documentation: docs/metrics/FINAL_METRICS.md and docs/metrics/METRIC_FILE_MAP_20260921.md.
+
+## Validation
+
+- /root/metrics_pr_validation_20260919/dev-env/bin/python -m pytest -q tests/test_vbench_motion_script.py tests/test_vbench_official_wrapper.py
+- No model weights, virtual environments, task data, or future-dataset scores are committed.
+
+## Scope
+
+This PR covers only Motion Smoothness / AMT, Temporal Flickering, and Dynamic Degree.
+~~~
 
 ~~~bash
 cd /mnt/yiyang-workspace/WM-PerceptHarness
@@ -157,6 +216,40 @@ git push -u origin pr/metrics-motion
 
 指标：CLIPScore、ViCLIP / Overall Consistency、Subject Consistency、Background Consistency。
 
+### 可直接粘贴的 PR Summary
+
+~~~markdown
+## Summary
+
+- Add the official text-video alignment and consistency integrations.
+- CLIPScore:
+  - code: scripts/score_vbench_clip_score.py
+  - tests: tests/test_vbench_clip_score_wrapper.py
+- ViCLIP / Overall Consistency:
+  - code: scripts/score_vbench_official.py
+  - selector: overall_consistency
+  - tests: tests/test_vbench_official_wrapper.py
+- Subject Consistency:
+  - code: scripts/score_vbench_official.py
+  - selector: subject_consistency
+  - tests: tests/test_vbench_official_wrapper.py
+- Background Consistency:
+  - code: scripts/score_vbench_official.py
+  - selector: background_consistency
+  - tests: tests/test_vbench_official_wrapper.py
+- Shared documentation: docs/metrics/FINAL_METRICS.md and docs/metrics/METRIC_FILE_MAP_20260921.md.
+- The wrappers preserve the official prompt, ViCLIP/BPE, DINO, and CLIP asset requirements.
+
+## Validation
+
+- /root/metrics_pr_validation_20260919/dev-env/bin/python -m pytest -q tests/test_vbench_clip_score_wrapper.py tests/test_vbench_official_wrapper.py
+- No model weights, virtual environments, task data, or future-dataset scores are committed.
+
+## Scope
+
+This PR covers only CLIPScore, ViCLIP / Overall Consistency, Subject Consistency, and Background Consistency.
+~~~
+
 ~~~bash
 cd /mnt/yiyang-workspace/WM-PerceptHarness
 git switch -C pr/metrics-alignment upstream/main
@@ -185,6 +278,41 @@ git push -u origin pr/metrics-alignment
 ## 七、类别四：指令遵循
 
 指标：Instruction Following。
+
+### 可直接粘贴的 PR Summary
+
+~~~markdown
+## Summary
+
+- Add the official WorldModelBench Instruction Following wrapper.
+- Input adapter:
+  - code: scripts/official_input_adapters.py
+  - function: adapt_worldmodelbench
+  - preserves: domain, subdomain, text_first_frame, text_instruction, and first_frame
+- Manifest validation:
+  - code: scripts/validate_metric_manifest.py
+  - validates: video path, prompt fields, first-frame path, and required metadata
+- Official runner:
+  - code: scripts/run_official_external.py
+  - selector: instruction_following
+  - preflights the pinned WorldModelBench checkout, VILA-EWM judge path, manifest, and command
+- Tests:
+  - tests/test_official_input_adapters.py
+  - tests/test_official_external_runner.py
+
+## Official fidelity
+
+The wrapper does not replace the VILA-EWM judge or invent prompts and first frames. The caller supplies the official WorldModelBench source, judge weights, environment, videos, and metadata.
+
+## Validation
+
+- /root/metrics_pr_validation_20260919/dev-env/bin/python -m pytest -q tests/test_official_input_adapters.py tests/test_official_external_runner.py
+- No judge weights, virtual environments, task data, or future-dataset scores are committed.
+
+## Scope
+
+This PR covers only Instruction Following.
+~~~
 
 ~~~bash
 cd /mnt/yiyang-workspace/WM-PerceptHarness
@@ -216,6 +344,42 @@ git push -u origin pr/metrics-instruction
 ## 八、类别五：动作与物体关系
 
 指标：Action Binding、Motion Binding、Object Interactions。
+
+### 可直接粘贴的 PR Summary
+
+~~~markdown
+## Summary
+
+- Add the official T2V-CompBench V2 wrappers for Action Binding, Motion Binding, and Object Interactions.
+- Action Binding:
+  - adapter: scripts/official_input_adapters.py::adapt_action_binding
+  - runner selector: scripts/run_official_external.py --metric action_binding
+  - tests: tests/test_official_input_adapters.py and tests/test_official_external_runner.py
+- Motion Binding:
+  - adapter: scripts/official_input_adapters.py::adapt_motion_binding
+  - runner selector: scripts/run_official_external.py --metric motion_binding
+  - tests: tests/test_official_input_adapters.py and tests/test_official_external_runner.py
+  - official stages preserved: Grounded-SAM followed by DOT
+- Object Interactions:
+  - adapter: scripts/official_input_adapters.py::adapt_object_interactions
+  - runner selector: scripts/run_official_external.py --metric object_interactions
+  - tests: tests/test_official_input_adapters.py and tests/test_official_external_runner.py
+- Shared input contract: scripts/validate_metric_manifest.py.
+- Shared documentation: docs/metrics/OFFICIAL_EXTERNAL_RUNBOOK_20260921.md and docs/metrics/METRIC_FILE_MAP_20260921.md.
+
+## Official fidelity
+
+The wrapper does not replace Grid-LLaVA, Grounded-SAM, or DOT. The caller supplies the pinned T2V-CompBench V2 checkout, checkpoints, environments, videos, and metadata.
+
+## Validation
+
+- /root/metrics_pr_validation_20260919/dev-env/bin/python -m pytest -q tests/test_official_input_adapters.py tests/test_official_external_runner.py
+- No external model weights, virtual environments, task data, or future-dataset scores are committed.
+
+## Scope
+
+This PR covers only Action Binding, Motion Binding, and Object Interactions.
+~~~
 
 ~~~bash
 cd /mnt/yiyang-workspace/WM-PerceptHarness
@@ -250,6 +414,41 @@ Motion Binding 必须在 PR 说明中写清楚官方 Grounded-SAM 和 DOT 是两
 
 指标：Motion Order、Motion Rationality、Mechanics、Thermotics、Material。
 
+### 可直接粘贴的 PR Summary
+
+~~~markdown
+## Summary
+
+- Add the official VBench-2.0 wrappers for Motion Order Understanding, Motion Rationality, Mechanics, Thermotics, and Material.
+- Motion Order Understanding:
+  - adapter: scripts/official_input_adapters.py::adapt_vbench2
+  - runner selector: scripts/run_official_external.py --metric motion_order_understanding
+  - tests: tests/test_official_input_adapters.py and tests/test_official_external_runner.py
+- Motion Rationality:
+  - adapter: scripts/official_input_adapters.py::adapt_vbench2
+  - runner selector: scripts/run_official_external.py --metric motion_rationality
+  - tests: tests/test_official_input_adapters.py and tests/test_official_external_runner.py
+- Mechanics, Thermotics, and Material:
+  - adapter: scripts/official_input_adapters.py::adapt_vbench2
+  - runner selectors: mechanics, thermotics, material
+  - tests: tests/test_official_input_adapters.py and tests/test_official_external_runner.py
+- Shared manifest validation: scripts/validate_metric_manifest.py; required fields include prompt_en, dimension, and auxiliary_info.
+- Shared runbook: docs/metrics/OFFICIAL_EXTERNAL_RUNBOOK_20260921.md.
+
+## Official fidelity
+
+These five metrics remain VBench-2.0 standard-suite evaluations. The wrapper does not turn an arbitrary custom MP4 into a standard-suite sample and does not replace the official LLaVA-Video or Qwen judge.
+
+## Validation
+
+- /root/metrics_pr_validation_20260919/dev-env/bin/python -m pytest -q tests/test_official_input_adapters.py tests/test_official_external_runner.py
+- No VBench-2.0 weights, virtual environments, task data, or future-dataset scores are committed.
+
+## Scope
+
+This PR covers only Motion Order Understanding, Motion Rationality, Mechanics, Thermotics, and Material.
+~~~
+
 ~~~bash
 cd /mnt/yiyang-workspace/WM-PerceptHarness
 git switch -C pr/metrics-temporal-physics upstream/main
@@ -282,6 +481,44 @@ git push -u origin pr/metrics-temporal-physics
 ## 十、类别七：独立物理模型
 
 指标：PhyGenEval PCA、VideoPhy-2 PC、VideoPhy-2 SA。
+
+### 可直接粘贴的 PR Summary
+
+~~~markdown
+## Summary
+
+- Add the official PhyGenEval PCA and VideoPhy-2 PC/SA wrappers.
+- PhyGenEval PCA:
+  - input validation: scripts/official_input_adapters.py::validate_phygen_eval
+  - runner selector: scripts/run_official_external.py --metric phygen_eval_pca
+  - tests: tests/test_official_input_adapters.py and tests/test_official_external_runner.py
+- VideoPhy-2 PC:
+  - CSV adapter: scripts/official_input_adapters.py::adapt_videophy_csv
+  - runner selector: scripts/run_official_external.py --metric videophy_pc
+  - tests: tests/test_official_input_adapters.py and tests/test_official_external_runner.py
+- VideoPhy-2 SA:
+  - CSV adapter: scripts/official_input_adapters.py::adapt_videophy_csv
+  - runner selector: scripts/run_official_external.py --metric videophy_sa
+  - tests: tests/test_official_input_adapters.py and tests/test_official_external_runner.py
+- VideoPhy-2 Joint:
+  - post-processing: scripts/aggregate_videophy_joint.py
+  - tests: tests/test_remaining_data_tools.py
+  - behavior: deterministic join of official PC and SA results; it is not a fourth evaluator
+- Shared documentation: docs/metrics/OFFICIAL_EXTERNAL_RUNBOOK_20260921.md and docs/metrics/METRIC_FILE_MAP_20260921.md.
+
+## Official fidelity
+
+The wrapper does not invent PhyGenBench questions or replace the VideoPhy-2 checkpoint. The caller supplies the official repositories, environments, prompts, questions, videos, CSV files, and checkpoints.
+
+## Validation
+
+- /root/metrics_pr_validation_20260919/dev-env/bin/python -m pytest -q tests/test_official_input_adapters.py tests/test_official_external_runner.py tests/test_remaining_data_tools.py
+- No physics-model weights, virtual environments, task data, or future-dataset scores are committed.
+
+## Scope
+
+This PR covers only PhyGenEval PCA, VideoPhy-2 PC, and VideoPhy-2 SA. The VideoPhy-2 Joint field is included only as deterministic post-processing.
+~~~
 
 ~~~bash
 cd /mnt/yiyang-workspace/WM-PerceptHarness
@@ -320,6 +557,48 @@ VideoPhy-2 Joint 只是 PC/SA 结果的确定性合并，不是新的评分模�
 ## 十一、类别八：参考质量与分布质量
 
 指标：PSNR、SSIM、LPIPS、FID、FVD。
+
+### 可直接粘贴的 PR Summary
+
+~~~markdown
+## Summary
+
+- Add the official reference and distribution metric wrappers.
+- PSNR:
+  - manifest builder: scripts/build_reference_manifest.py
+  - runner selector: scripts/run_official_external.py --metric psnr
+  - tests: tests/test_remaining_data_tools.py and tests/test_official_external_runner.py
+- SSIM:
+  - manifest builder: scripts/build_reference_manifest.py
+  - runner selector: scripts/run_official_external.py --metric ssim
+  - tests: tests/test_remaining_data_tools.py and tests/test_official_external_runner.py
+- LPIPS:
+  - manifest builder: scripts/build_reference_manifest.py
+  - runner selector: scripts/run_official_external.py --metric lpips
+  - tests: tests/test_remaining_data_tools.py and tests/test_official_external_runner.py
+- FID:
+  - runner selector: scripts/run_official_external.py --metric fid
+  - official command: pinned IQA-PyTorch evaluator
+  - tests: tests/test_official_external_runner.py
+- FVD:
+  - runner selector: scripts/run_official_external.py --metric fvd
+  - official command: caller-provided pinned Google Research evaluator
+  - tests: tests/test_official_external_runner.py
+- Shared manifest validation: scripts/validate_metric_manifest.py.
+
+## Official fidelity
+
+The wrapper does not create ground-truth frames, reference statistics, or FVD collections. The caller supplies real time-aligned references, official statistics, or matched real/generated collections.
+
+## Validation
+
+- /root/metrics_pr_validation_20260919/dev-env/bin/python -m pytest -q tests/test_remaining_data_tools.py tests/test_official_external_runner.py
+- No reference collections, statistics, weights, virtual environments, or future-dataset scores are committed.
+
+## Scope
+
+This PR covers only PSNR, SSIM, LPIPS, FID, and FVD.
+~~~
 
 ~~~bash
 cd /mnt/yiyang-workspace/WM-PerceptHarness
