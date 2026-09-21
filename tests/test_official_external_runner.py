@@ -39,6 +39,7 @@ def _runner_factory(revision: str):
 def test_specs_cover_all_external_caller_metrics():
     assert EXTERNAL == set(SPECS)
     assert all(spec.command_hint and spec.source_url for spec in SPECS.values())
+    assert SPECS["fvd"].revision == "4700efb9afa54286b0e04473ba80a13e8461e25f"
 
 
 def test_check_only_verifies_pinned_revision_and_preserves_command(tmp_path):
@@ -92,7 +93,10 @@ def test_run_forwards_command_and_writes_log(tmp_path):
 
     def runner(command, **kwargs):
         calls.append((list(command), kwargs))
-        return subprocess.CompletedProcess(command, 0, stdout="", stderr="")
+        stdout = ""
+        if list(command)[:4] == ["git", "-C", str(source), "rev-parse"]:
+            stdout = SPECS["fvd"].revision + "\n"
+        return subprocess.CompletedProcess(command, 0, stdout=stdout, stderr="")
 
     command = ["python", "official_fvd.py", "--real", str(reference), "--generated", str(generated)]
     result = run_official(metric="fvd", source_dir=source, checkpoint=None,
@@ -100,8 +104,8 @@ def test_run_forwards_command_and_writes_log(tmp_path):
                           command=command, output=output, runner=runner)
     assert result["status"] == "complete"
     assert result["command"] == command
-    assert calls[0][0] == command
-    assert calls[0][1]["cwd"] == str(source)
+    assert calls[1][0] == command
+    assert calls[1][1]["cwd"] == str(source)
     assert Path(result["log"]).is_file()
 
 
