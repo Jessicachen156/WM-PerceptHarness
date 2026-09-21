@@ -1,3 +1,5 @@
+> **2026-09-21 official runbook.** Use `OFFICIAL_EXTERNAL_RUNBOOK_20260921.md` for the exact upstream URLs, revisions, checkpoint locations, installation commands, and official input boundaries. The older examples below are explanatory only; do not treat `/path/to/...` placeholders as a verified command.
+
 # Official input adapters
 
 `scripts/official_input_adapters.py` is a format checker and field-preserving

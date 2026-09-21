@@ -1,6 +1,6 @@
 # 最终指标清单（冻结版）
 
-更新时间：2026-09-20
+更新时间：2026-09-21
 
 本文件与同目录 `FINAL_METRICS.json` 是当前项目的唯一指标名单口径。依据官方代码包 `D:\北大相关\ai\WM评测\评测指标官方代码包_20260918\评测指标详解.md` 第 10.2—10.5 节；该节覆盖旧文档开头的 28 项说法。旧版文档仍保留作历史记录，不得据此新增或恢复指标。
 
@@ -53,7 +53,7 @@ Mechanics、Thermotics、Material 仍属于最终保留的物理专项，但按�
 
 ## 实现状态
 
-名单冻结不等于每项代码已经完成。现有 PR 中已提交并完成单视频验证的只有 Motion Smoothness / AMT；其余 20 项主榜和 5 项附表属于最终范围，仍需按各自官方仓库、权重、环境和输入格式补齐。`FINAL_METRICS.json` 的 `implementation_status` 记录这一点，不能把 `to_complete` 误读成“已实现”。
+名单冻结不等于项目替调用者下载权重或运行所有外部评测。现有 PR 中已提交并完成单视频验证的是 Motion Smoothness / AMT；其余条目在 `FINAL_METRICS.json` 中分为 `prepared_for_pr`（项目已提供官方入口/预检和说明）与 `external_caller_run`（项目提供官方输入适配或结果合并，推理由调用者在官方环境执行）。这些状态都不等于本仓库已经下载权重、完成全部数据集推理或替调用者生成 prompt/首帧/GT。
 
 ## 官方来源固定版本
 
@@ -61,6 +61,11 @@ Mechanics、Thermotics、Material 仍属于最终保留的物理专项，但按�
 - DOVER：`f1ddc96215bc7fbcf8f315c65d47905f339c3419`
 - Google Research（MUSIQ、FVD）：`4700efb9afa54286b0e04473ba80a13e8461e25f`
 - IQA-PyTorch 依赖：`18dd7a19694e94aac21019170e3f5e63d6b4e19e`
-- WorldModelBench、T2V-CompBench、PhyGenBench、VideoPhy-2：按官方代码包内 provenance 记录的仓库和版本执行；不得用其他裁判模型替代。
+- [WorldModelBench](https://github.com/WorldModelBench-Team/WorldModelBench)：`00b7aa17a05f9fd1ab5c8f66bcf476d04c9c33bf`。
+- [T2V-CompBench V2](https://github.com/KaiyueSun98/T2V-CompBench/tree/V2)：固定提交 `dd5eff7b93af0550b9efa2bdabbb21b3b017ceda`。
+- [PhyGenBench](https://github.com/OpenGVLab/PhyGenBench)：`f8642cb796f3bcb01f0b7c1b2ec53b75d357c739`。
+- [VideoPhy-2](https://github.com/Hritikbansal/videophy/tree/main/VIDEOPHY2)：调用者固定并记录该目录的 `git rev-parse HEAD`；官方模型为 [videophy_2_auto](https://huggingface.co/videophysics/videophy_2_auto)。
+
+所有外部评测都必须按 `OFFICIAL_EXTERNAL_RUNBOOK_20260921.md` 的官方命令执行；不得用其他裁判模型替代。
 
 模型权重、环境和输入模板必须继续遵循各自官方发布物；本清单只冻结“选哪些指标”，不授权改写评分公式或替换模型。

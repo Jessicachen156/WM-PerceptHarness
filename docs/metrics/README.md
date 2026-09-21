@@ -4,6 +4,13 @@ This directory documents standalone use of two video metrics, separate from the 
 
 Both standalone scripts accept one video and produce a JSON result. The Motion Smoothness wrapper invokes the unchanged official `vbench==0.1.5` CLI; it does not reimplement its scoring algorithm or alter its video preprocessing.
 
+## Remaining official integrations
+
+- `PR_READY_RUNBOOK_20260921.md` — exact local checks, commit/push commands, PR title, and PR body.
+- `OFFICIAL_EXTERNAL_RUNBOOK_20260921.md` — official environments, checkpoint locations, input formats, and caller-run commands.
+
+These runbooks do not bundle model weights or virtual environments. They also distinguish official standard-suite dimensions from dimensions that accept custom input.
+
 ## CLIP-IQA+
 
 `score_clipiqa_plus.py` reuses the video decoding and frame-scoring protocol from MemoBench revision `f4edb0c4f9f1820bac837ee30d4957811cf275ff`. The model is supplied by PyIQA (`pyiqa==0.1.16`). The script does not implement CLIP-IQA+ itself and does not fall back to MUSIQ, Laplacian sharpness, or another metric.

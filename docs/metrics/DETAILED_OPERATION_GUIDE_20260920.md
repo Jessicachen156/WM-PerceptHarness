@@ -1,3 +1,5 @@
+> **2026-09-21 official runbook.** Use `OFFICIAL_EXTERNAL_RUNBOOK_20260921.md` for the exact upstream URLs, revisions, checkpoint locations, installation commands, and official input boundaries. The older examples below are explanatory only; do not treat `/path/to/...` placeholders as a verified command.
+
 # 指标接入、Smoke Test 与 PR 操作指南
 
 更新时间：2026-09-20

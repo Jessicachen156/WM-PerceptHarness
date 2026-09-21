@@ -14,139 +14,161 @@
   "main_benchmark": [
     {
       "metric": "musiq_imaging_quality",
-      "status": "scored_unverified_runtime",
-      "blocker": "Real official-source single-video smoke passed, but current host runtime is torch2.10/cu128 with numpy2/timm1.0.28/transformers5.8.1; strict VBench requirements and CUDA gate are not yet satisfied.",
-      "evidence": "/root/official_video_metrics_20260918/results/vbench_visual_smoke_0582_committed/"
+      "status": "prepared_for_pr",
+      "blocker": "caller supplies official checkpoint/environment and any task-owned prompt; no local inference claim",
+      "runtime_inputs": "按官方运行说明由调用者提供：模型/环境，以及该指标需要的 prompt、首帧、auxiliary_info、问题文件或真实参考集合。"
     },
     {
       "metric": "dover",
-      "status": "blocked",
-      "blocker": "DOVER.pth and Torch 1.13-compatible environment"
+      "status": "prepared_for_pr",
+      "blocker": "caller supplies official checkpoint/environment and any task-owned prompt; no local inference claim",
+      "runtime_inputs": "按官方运行说明由调用者提供：模型/环境，以及该指标需要的 prompt、首帧、auxiliary_info、问题文件或真实参考集合。"
     },
     {
       "metric": "motion_smoothness",
       "status": "submitted",
-      "blocker": null
+      "blocker": null,
+      "runtime_inputs": "按官方运行说明由调用者提供：模型/环境，以及该指标需要的 prompt、首帧、auxiliary_info、问题文件或真实参考集合。"
     },
     {
       "metric": "temporal_flickering",
-      "status": "conditional",
-      "blocker": "No frozen static/near-static subset and excluded-count rule."
+      "status": "prepared_for_pr",
+      "blocker": "caller supplies official checkpoint/environment and any task-owned prompt; no local inference claim",
+      "runtime_inputs": "按官方运行说明由调用者提供：模型/环境，以及该指标需要的 prompt、首帧、auxiliary_info、问题文件或真实参考集合。"
     },
     {
       "metric": "dynamic_degree",
-      "status": "scored_unverified_runtime",
-      "blocker": "Real official-source single-video smoke passed, but current host runtime is torch2.10/cu128 with numpy2/timm1.0.28/transformers5.8.1; strict VBench requirements and CUDA gate are not yet satisfied.",
-      "evidence": "/root/official_video_metrics_20260918/results/vbench_visual_smoke_0582_committed/"
+      "status": "prepared_for_pr",
+      "blocker": "caller supplies official checkpoint/environment and any task-owned prompt; no local inference claim",
+      "runtime_inputs": "按官方运行说明由调用者提供：模型/环境，以及该指标需要的 prompt、首帧、auxiliary_info、问题文件或真实参考集合。"
     },
     {
       "metric": "clip_score",
-      "status": "conditional",
-      "blocker": "Exact task-level video-to-prompt manifest and strict official runtime smoke remain unresolved."
+      "status": "prepared_for_pr",
+      "blocker": "caller supplies official checkpoint/environment and any task-owned prompt; no local inference claim",
+      "runtime_inputs": "按官方运行说明由调用者提供：模型/环境，以及该指标需要的 prompt、首帧、auxiliary_info、问题文件或真实参考集合。"
     },
     {
       "metric": "overall_consistency",
-      "status": "conditional",
-      "blocker": "The smoke video concatenates two segments and only seg_000 prompt was available; exact task-level video-to-prompt manifest is unresolved."
+      "status": "prepared_for_pr",
+      "blocker": "caller supplies official checkpoint/environment and any task-owned prompt; no local inference claim",
+      "runtime_inputs": "按官方运行说明由调用者提供：模型/环境，以及该指标需要的 prompt、首帧、auxiliary_info、问题文件或真实参考集合。"
     },
     {
       "metric": "instruction_following",
-      "status": "blocked",
-      "blocker": "WorldModelBench/VILA judge and data layout"
+      "status": "external_caller_run",
+      "blocker": "caller runs the pinned upstream evaluator with official assets; this repo validates input and preserves official fields",
+      "runtime_inputs": "按官方运行说明由调用者提供：模型/环境，以及该指标需要的 prompt、首帧、auxiliary_info、问题文件或真实参考集合。"
     },
     {
       "metric": "action_binding",
-      "status": "blocked",
-      "blocker": "T2V-CompBench LLaVA environment and metadata"
+      "status": "external_caller_run",
+      "blocker": "caller runs the pinned upstream evaluator with official assets; this repo validates input and preserves official fields",
+      "runtime_inputs": "按官方运行说明由调用者提供：模型/环境，以及该指标需要的 prompt、首帧、auxiliary_info、问题文件或真实参考集合。"
     },
     {
       "metric": "motion_binding",
-      "status": "blocked",
-      "blocker": "Grounded-SAM/DOT official pipeline"
+      "status": "external_caller_run",
+      "blocker": "caller runs the pinned upstream evaluator with official assets; this repo validates input and preserves official fields",
+      "runtime_inputs": "按官方运行说明由调用者提供：模型/环境，以及该指标需要的 prompt、首帧、auxiliary_info、问题文件或真实参考集合。"
     },
     {
       "metric": "motion_order_understanding",
-      "status": "blocked",
-      "blocker": "VBench-2.0 auxiliary_info and LLaVA-Video/Qwen"
+      "status": "external_caller_run",
+      "blocker": "caller runs the pinned upstream evaluator with official assets; this repo validates input and preserves official fields",
+      "runtime_inputs": "按官方运行说明由调用者提供：模型/环境，以及该指标需要的 prompt、首帧、auxiliary_info、问题文件或真实参考集合。"
     },
     {
       "metric": "motion_rationality",
-      "status": "blocked",
-      "blocker": "VBench-2.0 consequence questions and LLaVA-Video"
+      "status": "external_caller_run",
+      "blocker": "caller runs the pinned upstream evaluator with official assets; this repo validates input and preserves official fields",
+      "runtime_inputs": "按官方运行说明由调用者提供：模型/环境，以及该指标需要的 prompt、首帧、auxiliary_info、问题文件或真实参考集合。"
     },
     {
       "metric": "object_interactions",
-      "status": "blocked",
-      "blocker": "T2V-CompBench interaction metadata and judge"
+      "status": "external_caller_run",
+      "blocker": "caller runs the pinned upstream evaluator with official assets; this repo validates input and preserves official fields",
+      "runtime_inputs": "按官方运行说明由调用者提供：模型/环境，以及该指标需要的 prompt、首帧、auxiliary_info、问题文件或真实参考集合。"
     },
     {
       "metric": "phygen_eval_pca",
-      "status": "blocked",
-      "blocker": "PhyGenBench models/environment"
+      "status": "external_caller_run",
+      "blocker": "caller runs the pinned upstream evaluator with official assets; this repo validates input and preserves official fields",
+      "runtime_inputs": "按官方运行说明由调用者提供：模型/环境，以及该指标需要的 prompt、首帧、auxiliary_info、问题文件或真实参考集合。"
     },
     {
       "metric": "video_phy_pc",
-      "status": "blocked",
-      "blocker": "VideoPhy-2 checkpoint/environment"
+      "status": "external_caller_run",
+      "blocker": "caller runs the pinned upstream evaluator with official assets; this repo validates input and preserves official fields",
+      "runtime_inputs": "按官方运行说明由调用者提供：模型/环境，以及该指标需要的 prompt、首帧、auxiliary_info、问题文件或真实参考集合。"
     },
     {
       "metric": "video_phy_sa",
-      "status": "blocked",
-      "blocker": "VideoPhy-2 checkpoint/environment"
+      "status": "external_caller_run",
+      "blocker": "caller runs the pinned upstream evaluator with official assets; this repo validates input and preserves official fields",
+      "runtime_inputs": "按官方运行说明由调用者提供：模型/环境，以及该指标需要的 prompt、首帧、auxiliary_info、问题文件或真实参考集合。"
     },
     {
       "metric": "mechanics",
-      "status": "blocked",
-      "blocker": "VBench-2.0 auxiliary_info and LLaVA-Video"
+      "status": "external_caller_run",
+      "blocker": "caller runs the pinned upstream evaluator with official assets; this repo validates input and preserves official fields",
+      "runtime_inputs": "按官方运行说明由调用者提供：模型/环境，以及该指标需要的 prompt、首帧、auxiliary_info、问题文件或真实参考集合。"
     },
     {
       "metric": "thermotics",
-      "status": "blocked",
-      "blocker": "VBench-2.0 auxiliary_info and LLaVA-Video"
+      "status": "external_caller_run",
+      "blocker": "caller runs the pinned upstream evaluator with official assets; this repo validates input and preserves official fields",
+      "runtime_inputs": "按官方运行说明由调用者提供：模型/环境，以及该指标需要的 prompt、首帧、auxiliary_info、问题文件或真实参考集合。"
     },
     {
       "metric": "material",
-      "status": "blocked",
-      "blocker": "VBench-2.0 auxiliary_info and LLaVA-Video"
+      "status": "external_caller_run",
+      "blocker": "caller runs the pinned upstream evaluator with official assets; this repo validates input and preserves official fields",
+      "runtime_inputs": "按官方运行说明由调用者提供：模型/环境，以及该指标需要的 prompt、首帧、auxiliary_info、问题文件或真实参考集合。"
     },
     {
       "metric": "subject_consistency",
-      "status": "scored_unverified_runtime",
-      "blocker": "Real official-source single-video smoke passed, but current host runtime is torch2.10/cu128 with numpy2/timm1.0.28/transformers5.8.1; strict VBench requirements and CUDA gate are not yet satisfied.",
-      "evidence": "/root/official_video_metrics_20260918/results/vbench_visual_smoke_0582_committed/"
+      "status": "prepared_for_pr",
+      "blocker": "caller supplies official checkpoint/environment and any task-owned prompt; no local inference claim",
+      "runtime_inputs": "按官方运行说明由调用者提供：模型/环境，以及该指标需要的 prompt、首帧、auxiliary_info、问题文件或真实参考集合。"
     },
     {
       "metric": "background_consistency",
-      "status": "scored_unverified_runtime",
-      "blocker": "Real official-source single-video smoke passed, but current host runtime is torch2.10/cu128 with numpy2/timm1.0.28/transformers5.8.1; strict VBench requirements and CUDA gate are not yet satisfied.",
-      "evidence": "/root/official_video_metrics_20260918/results/vbench_visual_smoke_0582_committed/"
+      "status": "prepared_for_pr",
+      "blocker": "caller supplies official checkpoint/environment and any task-owned prompt; no local inference claim",
+      "runtime_inputs": "按官方运行说明由调用者提供：模型/环境，以及该指标需要的 prompt、首帧、auxiliary_info、问题文件或真实参考集合。"
     }
   ],
   "appendix": [
     {
       "metric": "psnr",
-      "status": "conditional",
-      "blocker": "aligned future reference frames"
+      "status": "external_caller_run",
+      "blocker": "caller supplies real time-aligned future reference frames",
+      "runtime_inputs": "按官方运行说明由调用者提供：模型/环境，以及该指标需要的 prompt、首帧、auxiliary_info、问题文件或真实参考集合。"
     },
     {
       "metric": "ssim",
-      "status": "conditional",
-      "blocker": "aligned future reference frames"
+      "status": "external_caller_run",
+      "blocker": "caller supplies real time-aligned future reference frames",
+      "runtime_inputs": "按官方运行说明由调用者提供：模型/环境，以及该指标需要的 prompt、首帧、auxiliary_info、问题文件或真实参考集合。"
     },
     {
       "metric": "lpips",
-      "status": "conditional",
-      "blocker": "aligned future reference frames"
+      "status": "external_caller_run",
+      "blocker": "caller supplies real time-aligned future reference frames",
+      "runtime_inputs": "按官方运行说明由调用者提供：模型/环境，以及该指标需要的 prompt、首帧、auxiliary_info、问题文件或真实参考集合。"
     },
     {
       "metric": "fvd",
-      "status": "blocked",
-      "blocker": "matched real video set and TensorFlow/TF-Hub environment"
+      "status": "external_caller_run",
+      "blocker": "caller supplies matched real video collection and official TensorFlow environment",
+      "runtime_inputs": "按官方运行说明由调用者提供：模型/环境，以及该指标需要的 prompt、首帧、auxiliary_info、问题文件或真实参考集合。"
     },
     {
       "metric": "fid",
-      "status": "blocked",
-      "blocker": "matched real frame set/statistics and fixed feature environment"
+      "status": "external_caller_run",
+      "blocker": "caller supplies matched real image/frame collection or official statistics",
+      "runtime_inputs": "按官方运行说明由调用者提供：模型/环境，以及该指标需要的 prompt、首帧、auxiliary_info、问题文件或真实参考集合。"
     }
   ],
   "runtime_status": {
@@ -158,5 +180,11 @@
       "official-compatible environment passes pip check and the declared CUDA/Torch gate",
       "one real official invocation emits a validated result and its log is preserved"
     ]
+  },
+  "status_meaning": {
+    "submitted": "已经进入旧 PR 并有真实单视频证据。",
+    "prepared_for_pr": "仓库代码和官方运行说明已准备，可以提交官方接入/预检 PR；权重、环境和任务输入由运行者提供。",
+    "external_caller_run": "仓库提供字段检查、适配或合并工具；真正评分必须由运行者在官方仓库和官方环境中执行。",
+    "runtime_inputs": "prompt、首帧、auxiliary_info、真实参考帧和真实集合属于每个实验的输入，不应提交到 Git。"
   }
 }

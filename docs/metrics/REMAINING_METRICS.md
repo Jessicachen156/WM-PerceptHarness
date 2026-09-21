@@ -1,3 +1,5 @@
+> **2026-09-21 official runbook.** Use `OFFICIAL_EXTERNAL_RUNBOOK_20260921.md` for the exact upstream URLs, revisions, checkpoint locations, installation commands, and official input boundaries. The older examples below are explanatory only; do not treat `/path/to/...` placeholders as a verified command.
+
 # Remaining metrics preparation package
 
 This increment prepares the metrics that were absent from the earlier
