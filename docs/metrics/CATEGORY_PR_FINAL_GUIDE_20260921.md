@@ -400,6 +400,27 @@ All metrics accept one arbitrary video without metadata.
 All external evaluators have already been smoke-tested.
 ~~~
 
+## Submission order and shared files
+
+Do not create all eight branches at the same time from the old upstream/main. Several categories share the final wrapper files:
+
+- score_vbench_official.py is used by the quality, motion, and alignment categories.
+- official_input_adapters.py, validate_metric_manifest.py, and run_official_external.py are used by several external categories.
+- tests/test_official_input_adapters.py and tests/test_official_external_runner.py are shared contract tests.
+
+Submit and merge categories one at a time:
+
+1. Create one category branch and run its tests.
+2. Push it and create the PR.
+3. After that PR is merged, run git fetch upstream main.
+4. Create the next category branch from the new upstream/main.
+5. If a shared file is already in the base branch, git restore will not create a duplicate diff.
+
+Recommended order: quality, motion, alignment, instruction, action-relations, temporal-physics, physics-models, reference-distribution.
+
+Do not create a dependent category branch from an old upstream/main while the previous shared-file PR is still open.
+
+
 ## 十三、最终检查
 
 创建每个 PR 前必须确认：
