@@ -86,7 +86,7 @@ SPECS: dict[str, MetricSpec] = {
         "https://github.com/chaofengc/IQA-PyTorch", "18dd7a19694e94aac21019170e3f5e63d6b4e19e", "IQA-PyTorch",
         "pyiqa fid -t GENERATED -r REFERENCE", needs_generated=True, needs_reference=True),
     "fvd": MetricSpec(
-        "https://github.com/google-research/google-research", None, "Google Research FVD",
+        "https://github.com/google-research/google-research", "4700efb9afa54286b0e04473ba80a13e8461e25f", "Google Research FVD",
         "python official_fvd_runner.py --real REAL_COLLECTION --generated GENERATED_COLLECTION", needs_generated=True, needs_reference=True),
 }
 
