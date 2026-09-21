@@ -56,75 +56,87 @@
     },
     {
       "metric": "instruction_following",
-      "status": "external_caller_run",
-      "blocker": "caller runs the pinned upstream evaluator with official assets; this repo validates input and preserves official fields",
-      "runtime_inputs": "按官方运行说明由调用者提供：模型/环境，以及该指标需要的 prompt、首帧、auxiliary_info、问题文件或真实参考集合。"
+      "status": "prepared_for_pr",
+      "blocker": "caller supplies pinned official source, environment, weights, and task inputs; project wrapper performs preflight and forwards the unchanged official command",
+      "runtime_inputs": "按官方运行说明由调用者提供：模型/环境，以及该指标需要的 prompt、首帧、auxiliary_info、问题文件或真实参考集合。",
+      "runtime_evidence": "not_run_in_project_environment"
     },
     {
       "metric": "action_binding",
-      "status": "external_caller_run",
-      "blocker": "caller runs the pinned upstream evaluator with official assets; this repo validates input and preserves official fields",
-      "runtime_inputs": "按官方运行说明由调用者提供：模型/环境，以及该指标需要的 prompt、首帧、auxiliary_info、问题文件或真实参考集合。"
+      "status": "prepared_for_pr",
+      "blocker": "caller supplies pinned official source, environment, weights, and task inputs; project wrapper performs preflight and forwards the unchanged official command",
+      "runtime_inputs": "按官方运行说明由调用者提供：模型/环境，以及该指标需要的 prompt、首帧、auxiliary_info、问题文件或真实参考集合。",
+      "runtime_evidence": "not_run_in_project_environment"
     },
     {
       "metric": "motion_binding",
-      "status": "external_caller_run",
-      "blocker": "caller runs the pinned upstream evaluator with official assets; this repo validates input and preserves official fields",
-      "runtime_inputs": "按官方运行说明由调用者提供：模型/环境，以及该指标需要的 prompt、首帧、auxiliary_info、问题文件或真实参考集合。"
+      "status": "prepared_for_pr",
+      "blocker": "caller supplies pinned official source, environment, weights, and task inputs; project wrapper performs preflight and forwards the unchanged official command",
+      "runtime_inputs": "按官方运行说明由调用者提供：模型/环境，以及该指标需要的 prompt、首帧、auxiliary_info、问题文件或真实参考集合。",
+      "runtime_evidence": "not_run_in_project_environment"
     },
     {
       "metric": "motion_order_understanding",
-      "status": "external_caller_run",
-      "blocker": "caller runs the pinned upstream evaluator with official assets; this repo validates input and preserves official fields",
-      "runtime_inputs": "按官方运行说明由调用者提供：模型/环境，以及该指标需要的 prompt、首帧、auxiliary_info、问题文件或真实参考集合。"
+      "status": "prepared_for_pr",
+      "blocker": "caller supplies pinned official source, environment, weights, and task inputs; project wrapper performs preflight and forwards the unchanged official command",
+      "runtime_inputs": "按官方运行说明由调用者提供：模型/环境，以及该指标需要的 prompt、首帧、auxiliary_info、问题文件或真实参考集合。",
+      "runtime_evidence": "not_run_in_project_environment"
     },
     {
       "metric": "motion_rationality",
-      "status": "external_caller_run",
-      "blocker": "caller runs the pinned upstream evaluator with official assets; this repo validates input and preserves official fields",
-      "runtime_inputs": "按官方运行说明由调用者提供：模型/环境，以及该指标需要的 prompt、首帧、auxiliary_info、问题文件或真实参考集合。"
+      "status": "prepared_for_pr",
+      "blocker": "caller supplies pinned official source, environment, weights, and task inputs; project wrapper performs preflight and forwards the unchanged official command",
+      "runtime_inputs": "按官方运行说明由调用者提供：模型/环境，以及该指标需要的 prompt、首帧、auxiliary_info、问题文件或真实参考集合。",
+      "runtime_evidence": "not_run_in_project_environment"
     },
     {
       "metric": "object_interactions",
-      "status": "external_caller_run",
-      "blocker": "caller runs the pinned upstream evaluator with official assets; this repo validates input and preserves official fields",
-      "runtime_inputs": "按官方运行说明由调用者提供：模型/环境，以及该指标需要的 prompt、首帧、auxiliary_info、问题文件或真实参考集合。"
+      "status": "prepared_for_pr",
+      "blocker": "caller supplies pinned official source, environment, weights, and task inputs; project wrapper performs preflight and forwards the unchanged official command",
+      "runtime_inputs": "按官方运行说明由调用者提供：模型/环境，以及该指标需要的 prompt、首帧、auxiliary_info、问题文件或真实参考集合。",
+      "runtime_evidence": "not_run_in_project_environment"
     },
     {
       "metric": "phygen_eval_pca",
-      "status": "external_caller_run",
-      "blocker": "caller runs the pinned upstream evaluator with official assets; this repo validates input and preserves official fields",
-      "runtime_inputs": "按官方运行说明由调用者提供：模型/环境，以及该指标需要的 prompt、首帧、auxiliary_info、问题文件或真实参考集合。"
+      "status": "prepared_for_pr",
+      "blocker": "caller supplies pinned official source, environment, weights, and task inputs; project wrapper performs preflight and forwards the unchanged official command",
+      "runtime_inputs": "按官方运行说明由调用者提供：模型/环境，以及该指标需要的 prompt、首帧、auxiliary_info、问题文件或真实参考集合。",
+      "runtime_evidence": "not_run_in_project_environment"
     },
     {
       "metric": "video_phy_pc",
-      "status": "external_caller_run",
-      "blocker": "caller runs the pinned upstream evaluator with official assets; this repo validates input and preserves official fields",
-      "runtime_inputs": "按官方运行说明由调用者提供：模型/环境，以及该指标需要的 prompt、首帧、auxiliary_info、问题文件或真实参考集合。"
+      "status": "prepared_for_pr",
+      "blocker": "caller supplies pinned official source, environment, weights, and task inputs; project wrapper performs preflight and forwards the unchanged official command",
+      "runtime_inputs": "按官方运行说明由调用者提供：模型/环境，以及该指标需要的 prompt、首帧、auxiliary_info、问题文件或真实参考集合。",
+      "runtime_evidence": "not_run_in_project_environment"
     },
     {
       "metric": "video_phy_sa",
-      "status": "external_caller_run",
-      "blocker": "caller runs the pinned upstream evaluator with official assets; this repo validates input and preserves official fields",
-      "runtime_inputs": "按官方运行说明由调用者提供：模型/环境，以及该指标需要的 prompt、首帧、auxiliary_info、问题文件或真实参考集合。"
+      "status": "prepared_for_pr",
+      "blocker": "caller supplies pinned official source, environment, weights, and task inputs; project wrapper performs preflight and forwards the unchanged official command",
+      "runtime_inputs": "按官方运行说明由调用者提供：模型/环境，以及该指标需要的 prompt、首帧、auxiliary_info、问题文件或真实参考集合。",
+      "runtime_evidence": "not_run_in_project_environment"
     },
     {
       "metric": "mechanics",
-      "status": "external_caller_run",
-      "blocker": "caller runs the pinned upstream evaluator with official assets; this repo validates input and preserves official fields",
-      "runtime_inputs": "按官方运行说明由调用者提供：模型/环境，以及该指标需要的 prompt、首帧、auxiliary_info、问题文件或真实参考集合。"
+      "status": "prepared_for_pr",
+      "blocker": "caller supplies pinned official source, environment, weights, and task inputs; project wrapper performs preflight and forwards the unchanged official command",
+      "runtime_inputs": "按官方运行说明由调用者提供：模型/环境，以及该指标需要的 prompt、首帧、auxiliary_info、问题文件或真实参考集合。",
+      "runtime_evidence": "not_run_in_project_environment"
     },
     {
       "metric": "thermotics",
-      "status": "external_caller_run",
-      "blocker": "caller runs the pinned upstream evaluator with official assets; this repo validates input and preserves official fields",
-      "runtime_inputs": "按官方运行说明由调用者提供：模型/环境，以及该指标需要的 prompt、首帧、auxiliary_info、问题文件或真实参考集合。"
+      "status": "prepared_for_pr",
+      "blocker": "caller supplies pinned official source, environment, weights, and task inputs; project wrapper performs preflight and forwards the unchanged official command",
+      "runtime_inputs": "按官方运行说明由调用者提供：模型/环境，以及该指标需要的 prompt、首帧、auxiliary_info、问题文件或真实参考集合。",
+      "runtime_evidence": "not_run_in_project_environment"
     },
     {
       "metric": "material",
-      "status": "external_caller_run",
-      "blocker": "caller runs the pinned upstream evaluator with official assets; this repo validates input and preserves official fields",
-      "runtime_inputs": "按官方运行说明由调用者提供：模型/环境，以及该指标需要的 prompt、首帧、auxiliary_info、问题文件或真实参考集合。"
+      "status": "prepared_for_pr",
+      "blocker": "caller supplies pinned official source, environment, weights, and task inputs; project wrapper performs preflight and forwards the unchanged official command",
+      "runtime_inputs": "按官方运行说明由调用者提供：模型/环境，以及该指标需要的 prompt、首帧、auxiliary_info、问题文件或真实参考集合。",
+      "runtime_evidence": "not_run_in_project_environment"
     },
     {
       "metric": "subject_consistency",
@@ -142,33 +154,38 @@
   "appendix": [
     {
       "metric": "psnr",
-      "status": "external_caller_run",
-      "blocker": "caller supplies real time-aligned future reference frames",
-      "runtime_inputs": "按官方运行说明由调用者提供：模型/环境，以及该指标需要的 prompt、首帧、auxiliary_info、问题文件或真实参考集合。"
+      "status": "prepared_for_pr",
+      "blocker": "caller supplies pinned official source, environment, weights, and task inputs; project wrapper performs preflight and forwards the unchanged official command",
+      "runtime_inputs": "按官方运行说明由调用者提供：模型/环境，以及该指标需要的 prompt、首帧、auxiliary_info、问题文件或真实参考集合。",
+      "runtime_evidence": "not_run_in_project_environment"
     },
     {
       "metric": "ssim",
-      "status": "external_caller_run",
-      "blocker": "caller supplies real time-aligned future reference frames",
-      "runtime_inputs": "按官方运行说明由调用者提供：模型/环境，以及该指标需要的 prompt、首帧、auxiliary_info、问题文件或真实参考集合。"
+      "status": "prepared_for_pr",
+      "blocker": "caller supplies pinned official source, environment, weights, and task inputs; project wrapper performs preflight and forwards the unchanged official command",
+      "runtime_inputs": "按官方运行说明由调用者提供：模型/环境，以及该指标需要的 prompt、首帧、auxiliary_info、问题文件或真实参考集合。",
+      "runtime_evidence": "not_run_in_project_environment"
     },
     {
       "metric": "lpips",
-      "status": "external_caller_run",
-      "blocker": "caller supplies real time-aligned future reference frames",
-      "runtime_inputs": "按官方运行说明由调用者提供：模型/环境，以及该指标需要的 prompt、首帧、auxiliary_info、问题文件或真实参考集合。"
+      "status": "prepared_for_pr",
+      "blocker": "caller supplies pinned official source, environment, weights, and task inputs; project wrapper performs preflight and forwards the unchanged official command",
+      "runtime_inputs": "按官方运行说明由调用者提供：模型/环境，以及该指标需要的 prompt、首帧、auxiliary_info、问题文件或真实参考集合。",
+      "runtime_evidence": "not_run_in_project_environment"
     },
     {
       "metric": "fvd",
-      "status": "external_caller_run",
-      "blocker": "caller supplies matched real video collection and official TensorFlow environment",
-      "runtime_inputs": "按官方运行说明由调用者提供：模型/环境，以及该指标需要的 prompt、首帧、auxiliary_info、问题文件或真实参考集合。"
+      "status": "prepared_for_pr",
+      "blocker": "caller supplies pinned official source, environment, weights, and task inputs; project wrapper performs preflight and forwards the unchanged official command",
+      "runtime_inputs": "按官方运行说明由调用者提供：模型/环境，以及该指标需要的 prompt、首帧、auxiliary_info、问题文件或真实参考集合。",
+      "runtime_evidence": "not_run_in_project_environment"
     },
     {
       "metric": "fid",
-      "status": "external_caller_run",
-      "blocker": "caller supplies matched real image/frame collection or official statistics",
-      "runtime_inputs": "按官方运行说明由调用者提供：模型/环境，以及该指标需要的 prompt、首帧、auxiliary_info、问题文件或真实参考集合。"
+      "status": "prepared_for_pr",
+      "blocker": "caller supplies pinned official source, environment, weights, and task inputs; project wrapper performs preflight and forwards the unchanged official command",
+      "runtime_inputs": "按官方运行说明由调用者提供：模型/环境，以及该指标需要的 prompt、首帧、auxiliary_info、问题文件或真实参考集合。",
+      "runtime_evidence": "not_run_in_project_environment"
     }
   ],
   "runtime_status": {
@@ -183,8 +200,8 @@
   },
   "status_meaning": {
     "submitted": "已经进入旧 PR 并有真实单视频证据。",
-    "prepared_for_pr": "仓库代码和官方运行说明已准备，可以提交官方接入/预检 PR；权重、环境和任务输入由运行者提供。",
-    "external_caller_run": "仓库提供字段检查、适配或合并工具；真正评分必须由运行者在官方仓库和官方环境中执行。",
+    "prepared_for_pr": "Repository has an official wrapper, source/input preflight, and contract tests; caller supplies official environment, weights, and task inputs. Runtime evidence is tracked separately.",
+    "external_caller_run": "Legacy label; all 26 retained metrics now use prepared_for_pr or submitted_and_smoke_tested.",
     "runtime_inputs": "prompt、首帧、auxiliary_info、真实参考帧和真实集合属于每个实验的输入，不应提交到 Git。"
   }
 }

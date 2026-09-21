@@ -4,6 +4,28 @@ Date: 2026-09-21
 
 This document records the commands that the **user of the evaluator** runs. The project does not download or commit the large checkpoints. Every command below must be run from the exact official repository named in the section. Do not replace the official model with a smaller model and still call the result official.
 
+## Project wrapper for the external official evaluators
+
+The repository now provides scripts/run_official_external.py for every evaluator that was previously labelled external_caller_run. It does not reimplement any metric. It checks the pinned source revision and caller-owned paths, then forwards the exact official command after -- to the selected official working directory.
+
+Example preflight and execution:
+
+~~~bash
+PYTHON=/root/metrics_pr_validation_20260919/dev-env/bin/python
+$PYTHON scripts/run_official_external.py \
+  --metric action_binding \
+  --source-dir /data/sources/T2V-CompBench \
+  --manifest /data/manifests/action_binding.official.json \
+  --check-only -- \
+  python LLaVA/llava/eval/compbench_eval_action_binding.py \
+    --video-path /data/videos/action_binding \
+    --output-path /data/results/action_binding \
+    --read-prompt-file /data/manifests/action_binding.official.json \
+    --t2v-model MODEL_NAME
+~~~
+
+Remove --check-only to run the unchanged official command. The runner writes a log when --output is supplied and fails closed if the pinned source, checkpoint, manifest, generated frames, or reference collection is missing. Motion Binding uses the official two-stage process, so invoke the runner once for each official stage. FVD still requires the caller to provide the pinned Google Research command and matched real/generated collections.
+
 ## 1. VBench base dimensions
 
 Official source: `https://github.com/Vchitect/VBench`, pinned in this project to `fd18b3d055cb0fc6f066ca90fe2c3c8cbb698490`.

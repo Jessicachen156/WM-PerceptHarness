@@ -20,15 +20,13 @@ This means the repository contains a wrapper or preflight check for the metric. 
 
 It means the code is ready for a reviewer to inspect and for a PR to be opened. It does not mean that the official checkpoint is stored in this repository, that a fresh official environment has been installed here, or that the metric has scored the future dataset.
 
-Current prepared_for_pr metrics are MUSIQ / Imaging Quality, DOVER, Temporal Flickering, Dynamic Degree, CLIPScore, ViCLIP / Overall Consistency, Subject Consistency, and Background Consistency.
+All 25 metrics other than the already submitted Motion Smoothness are now prepared_for_pr. Their direct wrappers are score_vbench_official.py, score_vbench_clip_score.py, and score_dover_official.py; the former 17 external metrics use scripts/run_official_external.py.
 
-### external_caller_run
+### Former external_caller_run label
 
-This means this repository does not run the evaluator locally. It validates or preserves the exact official input fields and documents the official command, while the user runs the evaluator in the upstream repository with its own environment, weights, prompts, questions, first frames, auxiliary_info, or reference collection.
+The former external_caller_run label meant that the repository only had an input adapter or runbook. Those 17 retained metrics now have a project wrapper in scripts/run_official_external.py, so they are promoted to prepared_for_pr.
 
-It is still possible to submit an input-adapter or official-runbook PR for this category. The PR must say that it provides input compatibility and instructions. It must not say that the metric is locally implemented, smoke-tested, or able to score an arbitrary single video.
-
-Current external_caller_run metrics are Instruction Following, Action Binding, Motion Binding, Motion Order Understanding, Motion Rationality, Object Interactions, PhyGenEval PCA, VideoPhy-2 PC, VideoPhy-2 SA, Mechanics, Thermotics, Material, PSNR, SSIM, LPIPS, FVD, and FID.
+The wrapper still does not bundle weights or environments. It checks the pinned source and caller-owned paths, then forwards the unchanged official command. Runtime evidence remains separate and is currently not_run_in_project_environment.
 
 ## Recommended category PRs
 
@@ -37,11 +35,11 @@ Current external_caller_run metrics are Instruction Following, Action Binding, M
 | Image and video quality | MUSIQ / Imaging Quality; DOVER | scripts/score_vbench_official.py (imaging_quality only), scripts/score_dover_official.py, docs/metrics/DOVER.md, tests/test_vbench_official_wrapper.py, tests/test_dover_official_wrapper.py | Add official image and video quality metrics |
 | Motion quality and amount | Motion Smoothness / AMT; Temporal Flickering; Dynamic Degree | scripts/score_vbench_motion_smoothness.py, scripts/score_vbench_official.py (temporal_flickering and dynamic_degree only), tests/test_vbench_motion_script.py, tests/test_vbench_official_wrapper.py | Add official VBench motion-quality metrics |
 | Text-video alignment and consistency | CLIPScore; ViCLIP / Overall Consistency; Subject Consistency; Background Consistency | scripts/score_vbench_clip_score.py, scripts/score_vbench_official.py (overall_consistency, subject_consistency, background_consistency), tests/test_vbench_clip_score_wrapper.py, tests/test_vbench_official_wrapper.py | Add official text-video alignment and consistency metrics |
-| Instruction following | Instruction Following | scripts/official_input_adapters.py: adapt_worldmodelbench, scripts/validate_metric_manifest.py, tests/test_official_input_adapters.py, WorldModelBench section of docs/metrics/OFFICIAL_EXTERNAL_RUNBOOK_20260921.md | Add WorldModelBench instruction-following input adapter |
-| Action and object relations | Action Binding; Motion Binding; Object Interactions | scripts/official_input_adapters.py: adapt_action_binding, adapt_motion_binding, adapt_object_interactions, scripts/validate_metric_manifest.py, tests/test_official_input_adapters.py, T2V-CompBench V2 section of the official runbook | Add T2V-CompBench action and interaction adapters |
-| Temporal reasoning | Motion Order Understanding; Motion Rationality | scripts/official_input_adapters.py: adapt_vbench2, scripts/validate_metric_manifest.py, tests/test_official_input_adapters.py, VBench-2.0 temporal sections of the official runbook | Add VBench-2.0 temporal reasoning adapters |
-| Physical metrics | PhyGenEval PCA; VideoPhy-2 PC; VideoPhy-2 SA; Mechanics; Thermotics; Material | scripts/official_input_adapters.py: validate_phygen_eval, adapt_videophy_csv, adapt_vbench2; scripts/aggregate_videophy_joint.py; tests/test_official_input_adapters.py, tests/test_remaining_data_tools.py; PhyGenBench, VideoPhy-2, and VBench-2.0 sections of the official runbook | Add official physics-metric input adapters |
-| Reference and distribution quality | PSNR; SSIM; LPIPS; FVD; FID | scripts/build_reference_manifest.py, scripts/validate_metric_manifest.py, tests/test_remaining_data_tools.py, official IQA-PyTorch/Google FVD sections of the official runbook | Add reference and distribution metric input manifests |
+| Instruction following | Instruction Following | scripts/run_official_external.py --metric instruction_following, scripts/official_input_adapters.py: adapt_worldmodelbench, scripts/validate_metric_manifest.py, tests/test_official_input_adapters.py, WorldModelBench section of docs/metrics/OFFICIAL_EXTERNAL_RUNBOOK_20260921.md | Add WorldModelBench instruction-following input adapter |
+| Action and object relations | Action Binding; Motion Binding; Object Interactions | scripts/run_official_external.py --metric action_binding|motion_binding|object_interactions, scripts/official_input_adapters.py, scripts/validate_metric_manifest.py, tests/test_official_input_adapters.py, T2V-CompBench V2 section of the official runbook | Add T2V-CompBench action and interaction adapters |
+| Temporal reasoning | Motion Order Understanding; Motion Rationality | scripts/run_official_external.py --metric motion_order_understanding|motion_rationality, scripts/official_input_adapters.py: adapt_vbench2, scripts/validate_metric_manifest.py, tests/test_official_input_adapters.py, VBench-2.0 temporal sections of the official runbook | Add VBench-2.0 temporal reasoning adapters |
+| Physical metrics | PhyGenEval PCA; VideoPhy-2 PC; VideoPhy-2 SA; Mechanics; Thermotics; Material | scripts/run_official_external.py --metric phygen_eval_pca|videophy_pc|videophy_sa|mechanics|thermotics|material, scripts/official_input_adapters.py, scripts/aggregate_videophy_joint.py, tests/test_official_input_adapters.py, tests/test_remaining_data_tools.py, PhyGenBench/VideoPhy-2/VBench-2.0 sections of the official runbook | Add official physics-metric input adapters |
+| Reference and distribution quality | PSNR; SSIM; LPIPS; FVD; FID | scripts/run_official_external.py --metric psnr|ssim|lpips|fid|fvd, scripts/build_reference_manifest.py, scripts/validate_metric_manifest.py, tests/test_remaining_data_tools.py, official IQA-PyTorch/Google FVD sections of the official runbook | Add reference and distribution metric input manifests |
 
 Motion Smoothness was already submitted and smoke-tested in the earlier PR. If that PR is already merged, the motion-quality PR must not copy the same implementation again; it should contain only the new motion metrics and a link to the earlier PR.
 
@@ -178,11 +176,11 @@ Use only the rows for the selected category. Do not paste the 26-metric table in
 
 ## Status
 
-State either prepared_for_pr or external_caller_run.
+State prepared_for_pr for every retained metric in this catalog. Keep runtime evidence separate from PR readiness.
 
 For prepared_for_pr, say that this repository calls the unchanged official evaluator after checking the configured source and assets. Do not say that weights or environments are bundled.
 
-For external_caller_run, say that this repository validates the official input contract and documents the upstream command; the evaluator, weights, environment, and task-owned metadata remain caller-run.
+For the former external category, say that scripts/run_official_external.py validates the official input contract and forwards the upstream command; the evaluator, weights, environment, and task-owned metadata remain caller-run.
 
 ## Validation
 
@@ -198,6 +196,6 @@ State that this PR covers only CATEGORY. Do not claim that the other metric cate
 
 prepared_for_pr means: the project code has a reviewable official wrapper and preflight contract.
 
-external_caller_run means: the project code has a reviewable official input contract and run instructions, but scoring still happens in the metric author's official environment.
+All retained metrics are now prepared_for_pr: the project has a reviewable official wrapper or direct official entry point. Scoring still happens in the metric author's official environment when that is what the upstream project requires.
 
 Neither status means that all 26 metrics can accept one arbitrary MP4 with no prompt, first frame, auxiliary metadata, or reference data. The final status registry and the complete mapping are in docs/metrics/FINAL_METRICS.json, docs/metrics/STATUS_REMAINING.json, and docs/metrics/METRIC_FILE_MAP_20260921.md.

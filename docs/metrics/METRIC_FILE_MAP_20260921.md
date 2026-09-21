@@ -8,7 +8,7 @@
 
 - **已提交并 smoke tested**：已有真实单视频验证记录。
 - **可提交 PR / prepared_for_pr**：项目代码、源码校验、输入检查和官方运行说明齐全；使用者仍需下载官方权重、创建官方环境并运行。
-- **外部官方运行 / external_caller_run**：项目提供官方输入格式适配或结果合并；真正评分必须在指标作者的官方仓库和环境中完成。
+- **外部官方运行 / prepared_for_pr**：项目提供官方输入格式适配或结果合并；真正评分必须在指标作者的官方仓库和环境中完成。
 
 ## 21项主榜
 
@@ -21,18 +21,18 @@
 | Dynamic Degree | prepared_for_pr | `scripts/score_vbench_official.py`；`tests/test_vbench_official_wrapper.py` | 选择 `--dimension dynamic_degree`，校验官方 RAFT 权重和结果类型 | VBench `evaluate.py`；运行说明第1节 |
 | CLIPScore | prepared_for_pr | `scripts/score_vbench_clip_score.py`；`tests/test_vbench_clip_score_wrapper.py` | 构造官方 `clip_score.py` 所需的单视频 metadata，校验 OpenAI CLIP B/32 缓存 | VBench `competitions/clip_score.py`；运行说明第2节 |
 | ViCLIP / Overall Consistency | prepared_for_pr | `scripts/score_vbench_official.py`；`tests/test_vbench_official_wrapper.py` | 选择 `--dimension overall_consistency`，要求原始生成 prompt 和 ViCLIP 权重 | VBench `evaluate.py`；运行说明第1节 |
-| Instruction Following | external_caller_run | `scripts/official_input_adapters.py: adapt_worldmodelbench`；`tests/test_official_input_adapters.py` | 保留 `domain`、`subdomain`、`text_first_frame`、`text_instruction`、`first_frame`，另存本地视频映射 | WorldModelBench `evaluate.py` + 官方 VILA judge；运行说明第4节 |
-| Action Binding | external_caller_run | `scripts/official_input_adapters.py: adapt_action_binding`；`tests/test_official_input_adapters.py` | 输出官方 `action_binding.json` 字段，不生成 prompt 或分数 | T2V-CompBench V2 LLaVA evaluator；运行说明第5节 |
-| Motion Binding | external_caller_run | `scripts/official_input_adapters.py: adapt_motion_binding`；`tests/test_official_input_adapters.py` | 校验对象、方向和视频映射；不替代 Grounded-SAM/DOT 两阶段程序 | T2V-CompBench V2 Grounded-SAM + DOT；运行说明第5节 |
-| Motion Order Understanding | external_caller_run | `scripts/official_input_adapters.py: adapt_vbench2`；`scripts/validate_metric_manifest.py`；测试同上 | 保留官方 `prompt_en`、`dimension`、两个有序 `auxiliary_info` 动作 | VBench-2.0 标准套件；运行说明第6节 |
-| Motion Rationality | external_caller_run | `scripts/official_input_adapters.py: adapt_vbench2`；`scripts/validate_metric_manifest.py` | 保留官方 prompt、维度和 auxiliary_info；不允许伪造 custom 评分 | VBench-2.0 标准套件；运行说明第6节 |
-| Object Interactions | external_caller_run | `scripts/official_input_adapters.py: adapt_object_interactions`；`tests/test_official_input_adapters.py` | 输出官方 interaction metadata 和视频映射 | T2V-CompBench V2 LLaVA evaluator；运行说明第5节 |
-| PhyGenEval PCA | external_caller_run | `scripts/official_input_adapters.py: validate_phygen_eval`；`tests/test_official_input_adapters.py` | 原样校验官方 prompts/questions，不改写物理问题 | PhyGenBench `PhyGenEval`；运行说明第7节 |
-| VideoPhy-2 PC | external_caller_run | `scripts/official_input_adapters.py: adapt_videophy_csv(task="pc")`；测试同上 | 写出官方只有 `videopath` 列的 PC CSV | VideoPhy-2 `inference.py --task pc`；运行说明第8节 |
-| VideoPhy-2 SA | external_caller_run | `scripts/official_input_adapters.py: adapt_videophy_csv(task="sa")`；测试同上 | 写出官方 `videopath,caption` 两列的 SA CSV | VideoPhy-2 `inference.py --task sa`；运行说明第8节 |
-| Mechanics | external_caller_run | `scripts/official_input_adapters.py: adapt_vbench2`；`scripts/validate_metric_manifest.py` | 保留官方 auxiliary_info；项目不替代 VBench-2.0 物理模型 | VBench-2.0 标准套件；运行说明第6节 |
-| Thermotics | external_caller_run | `scripts/official_input_adapters.py: adapt_vbench2`；`scripts/validate_metric_manifest.py` | 保留官方 auxiliary_info；项目不替代 VBench-2.0 物理模型 | VBench-2.0 标准套件；运行说明第6节 |
-| Material | external_caller_run | `scripts/official_input_adapters.py: adapt_vbench2`；`scripts/validate_metric_manifest.py` | 保留官方 auxiliary_info；项目不替代 VBench-2.0 物理模型 | VBench-2.0 标准套件；运行说明第6节 |
+| Instruction Following | prepared_for_pr | `scripts/run_official_external.py --metric instruction_following; official_input_adapters.py: adapt_worldmodelbench`；`tests/test_official_input_adapters.py` | 保留 `domain`、`subdomain`、`text_first_frame`、`text_instruction`、`first_frame`，另存本地视频映射 | WorldModelBench `evaluate.py` + 官方 VILA judge；运行说明第4节 |
+| Action Binding | prepared_for_pr | `scripts/run_official_external.py --metric action_binding; official_input_adapters.py: adapt_action_binding`；`tests/test_official_input_adapters.py` | 输出官方 `action_binding.json` 字段，不生成 prompt 或分数 | T2V-CompBench V2 LLaVA evaluator；运行说明第5节 |
+| Motion Binding | prepared_for_pr | `scripts/run_official_external.py --metric motion_binding; official_input_adapters.py: adapt_motion_binding`；`tests/test_official_input_adapters.py` | 校验对象、方向和视频映射；不替代 Grounded-SAM/DOT 两阶段程序 | T2V-CompBench V2 Grounded-SAM + DOT；运行说明第5节 |
+| Motion Order Understanding | prepared_for_pr | `scripts/run_official_external.py --metric motion_order_understanding; official_input_adapters.py: adapt_vbench2`；`scripts/validate_metric_manifest.py`；测试同上 | 保留官方 `prompt_en`、`dimension`、两个有序 `auxiliary_info` 动作 | VBench-2.0 标准套件；运行说明第6节 |
+| Motion Rationality | prepared_for_pr | `scripts/run_official_external.py --metric motion_rationality; official_input_adapters.py: adapt_vbench2`；`scripts/validate_metric_manifest.py` | 保留官方 prompt、维度和 auxiliary_info；不允许伪造 custom 评分 | VBench-2.0 标准套件；运行说明第6节 |
+| Object Interactions | prepared_for_pr | `scripts/run_official_external.py --metric object_interactions; official_input_adapters.py: adapt_object_interactions`；`tests/test_official_input_adapters.py` | 输出官方 interaction metadata 和视频映射 | T2V-CompBench V2 LLaVA evaluator；运行说明第5节 |
+| PhyGenEval PCA | prepared_for_pr | `scripts/run_official_external.py --metric phygen_eval_pca; official_input_adapters.py: validate_phygen_eval`；`tests/test_official_input_adapters.py` | 原样校验官方 prompts/questions，不改写物理问题 | PhyGenBench `PhyGenEval`；运行说明第7节 |
+| VideoPhy-2 PC | prepared_for_pr | `scripts/run_official_external.py --metric videophy_pc; official_input_adapters.py: adapt_videophy_csv(task="pc")`；测试同上 | 写出官方只有 `videopath` 列的 PC CSV | VideoPhy-2 `inference.py --task pc`；运行说明第8节 |
+| VideoPhy-2 SA | prepared_for_pr | `scripts/run_official_external.py --metric videophy_sa; official_input_adapters.py: adapt_videophy_csv(task="sa")`；测试同上 | 写出官方 `videopath,caption` 两列的 SA CSV | VideoPhy-2 `inference.py --task sa`；运行说明第8节 |
+| Mechanics | prepared_for_pr | `scripts/run_official_external.py --metric mechanics; official_input_adapters.py: adapt_vbench2`；`scripts/validate_metric_manifest.py` | 保留官方 auxiliary_info；项目不替代 VBench-2.0 物理模型 | VBench-2.0 标准套件；运行说明第6节 |
+| Thermotics | prepared_for_pr | `scripts/run_official_external.py --metric thermotics; official_input_adapters.py: adapt_vbench2`；`scripts/validate_metric_manifest.py` | 保留官方 auxiliary_info；项目不替代 VBench-2.0 物理模型 | VBench-2.0 标准套件；运行说明第6节 |
+| Material | prepared_for_pr | `scripts/run_official_external.py --metric material; official_input_adapters.py: adapt_vbench2`；`scripts/validate_metric_manifest.py` | 保留官方 auxiliary_info；项目不替代 VBench-2.0 物理模型 | VBench-2.0 标准套件；运行说明第6节 |
 | Subject Consistency | prepared_for_pr | `scripts/score_vbench_official.py`；`tests/test_vbench_official_wrapper.py` | 选择 `--dimension subject_consistency`，校验 DINO 源码 checkout、DINO 权重和 Torch cache | VBench `evaluate.py`；运行说明第1节 |
 | Background Consistency | prepared_for_pr | `scripts/score_vbench_official.py`；`tests/test_vbench_official_wrapper.py` | 选择 `--dimension background_consistency`，校验 OpenAI CLIP B/32 权重 | VBench `evaluate.py`；运行说明第1节 |
 
@@ -40,13 +40,16 @@
 
 | 指标 | 当前状态 | 项目代码文件 | 代码包实际做什么 | 官方运行入口 |
 |---|---|---|---|---|
-| PSNR | external_caller_run | `scripts/build_reference_manifest.py`；`scripts/validate_metric_manifest.py`；`tests/test_remaining_data_tools.py` | 只配对同名生成帧和真实参考帧，拒绝自引用；不生成 GT、不计算 PSNR | IQA-PyTorch `inference_iqa.py -m PSNR`；运行说明第9节 |
-| SSIM | external_caller_run | `scripts/build_reference_manifest.py`；`scripts/validate_metric_manifest.py`；`tests/test_remaining_data_tools.py` | 同上，官方运行时选择 `-m SSIM` | IQA-PyTorch `inference_iqa.py -m SSIM`；运行说明第9节 |
-| LPIPS | external_caller_run | `scripts/build_reference_manifest.py`；`scripts/validate_metric_manifest.py`；`tests/test_remaining_data_tools.py` | 同上，官方运行时选择 `-m LPIPS` | IQA-PyTorch `inference_iqa.py -m LPIPS`；运行说明第9节 |
-| FVD | external_caller_run | `scripts/validate_metric_manifest.py`；`tests/test_remaining_data_tools.py` | 只登记真实/生成集合的输入边界；仓库没有重新实现 FVD 模型 | Google Research TensorFlow FVD；运行说明第9节 |
-| FID | external_caller_run | `scripts/validate_metric_manifest.py`；`tests/test_remaining_data_tools.py` | 只登记真实图像帧集合或官方统计文件；仓库不替换 Inception/FID 实现 | IQA-PyTorch `pyiqa fid`；运行说明第9节 |
+| PSNR | prepared_for_pr | `scripts/build_reference_manifest.py`；`scripts/run_official_external.py --metric psnr; validate_metric_manifest.py`；`tests/test_remaining_data_tools.py` | 只配对同名生成帧和真实参考帧，拒绝自引用；不生成 GT、不计算 PSNR | IQA-PyTorch `inference_iqa.py -m PSNR`；运行说明第9节 |
+| SSIM | prepared_for_pr | `scripts/build_reference_manifest.py`；`scripts/run_official_external.py --metric ssim; validate_metric_manifest.py`；`tests/test_remaining_data_tools.py` | 同上，官方运行时选择 `-m SSIM` | IQA-PyTorch `inference_iqa.py -m SSIM`；运行说明第9节 |
+| LPIPS | prepared_for_pr | `scripts/build_reference_manifest.py`；`scripts/run_official_external.py --metric lpips; validate_metric_manifest.py`；`tests/test_remaining_data_tools.py` | 同上，官方运行时选择 `-m LPIPS` | IQA-PyTorch `inference_iqa.py -m LPIPS`；运行说明第9节 |
+| FVD | prepared_for_pr | `scripts/run_official_external.py --metric fvd; validate_metric_manifest.py`；`tests/test_remaining_data_tools.py` | 只登记真实/生成集合的输入边界；仓库没有重新实现 FVD 模型 | Google Research TensorFlow FVD；运行说明第9节 |
+| FID | prepared_for_pr | `scripts/run_official_external.py --metric fid; validate_metric_manifest.py`；`tests/test_remaining_data_tools.py` | 只登记真实图像帧集合或官方统计文件；仓库不替换 Inception/FID 实现 | IQA-PyTorch `pyiqa fid`；运行说明第9节 |
 
 ## 共享文件
+- scripts/run_official_external.py: unified official-command wrapper for the former external metrics. Select with --metric; it checks the pinned source, checkpoint, manifest, generated collection, or reference collection and forwards the exact command after --.
+- tests/test_official_external_runner.py: offline contract tests for all 17 former external metric selectors.
+
 
 - `docs/metrics/FINAL_METRICS.json`：冻结 21 项主榜 + 5 项附表及状态。
 - `docs/metrics/STATUS_REMAINING.json`：逐项状态、调用者需要准备的输入和边界。
