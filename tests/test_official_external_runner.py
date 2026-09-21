@@ -105,6 +105,15 @@ def test_run_forwards_command_and_writes_log(tmp_path):
     assert Path(result["log"]).is_file()
 
 
+def test_missing_pinned_source_is_rejected(tmp_path):
+    manifest = tmp_path / "manifest.json"
+    manifest.write_text("[]", encoding="utf-8")
+    with pytest.raises(ValueError, match="requires --source-dir"):
+        preflight(metric="action_binding", source_dir=None, checkpoint=None,
+                  manifest=manifest, generated=None, reference=None,
+                  runner=lambda *args, **kwargs: None)
+
+
 def test_missing_required_checkpoint_is_rejected(tmp_path):
     source = _checkout(tmp_path, None)
     manifest = tmp_path / "manifest.json"
