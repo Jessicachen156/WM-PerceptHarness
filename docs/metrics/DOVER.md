@@ -1,3 +1,5 @@
+> **2026-09-21 authoritative instructions.** Use `OFFICIAL_EXTERNAL_RUNBOOK_20260921.md` for the official download URLs, upstream command, and external-runtime boundary. The older CPU setup below is a local compatibility option, not a claim that the DOVER authors pin that wheel combination.
+
 # DOVER 官方单视频融合分接入
 
 本次只准备包装脚本和本地契约测试，**尚未安装 DOVER 环境、下载权重或完成真实视频推理**。`--check-only` 成功也只表示文件与依赖版本检查通过，不能作为评分完成的证据。
@@ -14,7 +16,7 @@
 
 | 资源 | 官方默认加载位置 | 来源 |
 |---|---|---|
-| 完整 DOVER 模型 | `DOVER/pretrained_weights/DOVER.pth` | [作者 README 指定权重](https://huggingface.co/teowu/DOVER/resolve/main/DOVER.pth) |
+| 完整 DOVER 模型 | `DOVER/pretrained_weights/DOVER.pth` | [作者 README 指定权重](https://github.com/QualityAssessment/DOVER/releases/download/v0.1.0/DOVER.pth) |
 | ConvNeXt 初始化模型 | `$TORCH_HOME/hub/checkpoints/convnext_tiny_1k_224_ema.pth` | [官方代码指定的 Meta 权重](https://dl.fbaipublicfiles.com/convnext/convnext_tiny_1k_224_ema.pth) |
 
 第二项容易遗漏：`dover/models/evaluator.py` 构造 aesthetic 分支时固定调用 `convnext_3d_tiny(pretrained=True)`；其内部先执行 `torch.hub.load_state_dict_from_url`，随后才加载完整 DOVER checkpoint。即使已经有 `DOVER.pth`，缺少 ConvNeXt 缓存仍会触发官方代码下载。
