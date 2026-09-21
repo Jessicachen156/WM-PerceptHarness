@@ -8,10 +8,9 @@ import tempfile
 import unittest
 from unittest import mock
 
-SCRIPT = Path(__file__).resolve().parents[1] / "scripts" / "score_vbench_motion_smoothness.py"
-spec = importlib.util.spec_from_file_location("motion_script", SCRIPT)
-module = importlib.util.module_from_spec(spec)
-spec.loader.exec_module(module)
+SCRIPT = (Path(__file__).resolve().parents[1]
+          / "src" / "percept_harness" / "video_metrics" / "motion.py")
+from percept_harness.video_metrics import motion as module
 
 
 class MotionWrapperTests(unittest.TestCase):

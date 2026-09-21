@@ -1,17 +1,7 @@
-"""Score world-model generated videos against same-id real-video annotations.
+"""Compare annotations in <group>/<sample_id>/<sample_id>.json directories.
 
-Example (layout produced by the wm-annot runs: ``<group>-actions/<sid>/<sid>.json``):
-
-    python scripts/evaluate_wm_fidelity.py \
-        --reference data/outputs/wm-annot-20260918/gt-actions \
-        --system wan=data/outputs/wm-annot-20260918/wan-actions \
-        --system h3=data/outputs/wm-annot-20260918/h3-actions \
-        --self-agreement run1=.../percept-doubao-sam31-20260916/stage2 \
-                         run2=.../percept-doubao-sam31-rerun-20260918/stage2 \
-        --semantic --out wm_fidelity_report.json
-
-``--semantic`` needs ``sentence-transformers`` (set HF_HUB_OFFLINE=1 when the
-model is cached); paired Wilcoxon needs ``scipy``. Both are optional.
+Use --semantic for description similarity (requires the fidelity extra).
+Use --self-agreement with two independent real-video annotation runs.
 """
 
 from __future__ import annotations
@@ -19,13 +9,9 @@ from __future__ import annotations
 import argparse
 import json
 import statistics
-import sys
 from pathlib import Path
 
-REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(REPOSITORY_ROOT / "src"))
-
-from percept_harness.evaluation.wm_fidelity import (  # noqa: E402
+from percept_harness.evaluation.wm_fidelity import (
     DURATION_STRATA,
     EVENT_COUNT_STRATA,
     FAMILIES,

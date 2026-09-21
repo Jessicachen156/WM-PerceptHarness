@@ -1,4 +1,4 @@
-"""The `percept` command-line interface: evaluate videos in one process."""
+"""The `percept` command-line interface for annotation and scoring."""
 
 from __future__ import annotations
 
@@ -9,12 +9,12 @@ from collections.abc import Sequence
 from contextlib import contextmanager
 from pathlib import Path
 
+from .result_store import OutputBusyError
 from .config import Settings
 from .runner import (
     SUPPORTED_TEMPLATES,
     SyncRunner,
     collect_videos,
-    default_pipeline_registry,
     run_batch,
 )
 
@@ -22,8 +22,24 @@ _BACKENDS = ("openai", "fake")
 
 
 def main(argv: Sequence[str] | None = None) -> int:
+    argv = list(sys.argv[1:] if argv is None else argv)
+    if argv and argv[0] == "score":
+        score_parser = argparse.ArgumentParser(
+            prog="percept score",
+            description="Score annotations or videos in the active metric environment.",
+        )
+        score_parser.add_argument("metric", choices=("fidelity", "clipiqa", "motion"))
+        # Parse only the selector; each evaluator owns its remaining arguments/help.
+        selected = score_parser.parse_args(argv[1:2])
+        if selected.metric == "fidelity":
+            from .evaluation.fidelity_cli import main as score_main
+        elif selected.metric == "clipiqa":
+            from .video_metrics.clipiqa import main as score_main
+        else:
+            from .video_metrics.motion import main as score_main
+        return score_main(argv[2:]) or 0
     arguments = _parser().parse_args(argv)
-    if arguments.command == "eval":
+    if arguments.command == "annotate":
         return _eval(arguments)
     raise AssertionError("unreachable: argparse enforces the command set")
 
@@ -31,11 +47,17 @@ def main(argv: Sequence[str] | None = None) -> int:
 def _parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="percept",
-        description="Evaluate videos with a configured VLM backend.",
+        description="Annotate videos and compute evaluation metrics.",
     )
     commands = parser.add_subparsers(dest="command", required=True)
 
-    evaluate = commands.add_parser("eval", help="evaluate videos to structured JSON")
+    commands.add_parser(
+        "score", help="score {fidelity,clipiqa,motion} in the corresponding environment",
+    )
+    evaluate = commands.add_parser(
+        "annotate",
+        help="annotate videos to structured JSON",
+    )
     evaluate.add_argument(
         "--videos",
         nargs="+",
@@ -51,7 +73,7 @@ def _parser() -> argparse.ArgumentParser:
     )
     evaluate.add_argument(
         "--backend",
-        required=True,
+        default="openai",
         choices=_BACKENDS,
         help="VLM backend configured in the environment",
     )
@@ -61,6 +83,7 @@ def _parser() -> argparse.ArgumentParser:
         type=Path,
         help="output directory for per-video JSON and results.jsonl",
     )
+    evaluate.add_argument("--force", action="store_true", help="rerun matching results; archive displaced files")
     evaluate.add_argument(
         "--model",
         default=None,
@@ -113,12 +136,14 @@ def _eval(arguments: argparse.Namespace) -> int:
         return 2
 
     cv_provider = arguments.cv if arguments.cv is not None else settings.cv_provider
-    if cv_provider != settings.cv_provider:
+    overrides = {"cv_provider": cv_provider}
+    if arguments.cv_device is not None:
+        overrides["cv_device"] = arguments.cv_device
+    if cv_provider != settings.cv_provider or arguments.cv_device is not None:
         # Settings validates sam31 paths only when PERCEPT_CV_PROVIDER=sam31, so
         # re-validate with the CLI override applied.
         try:
-            settings = settings.model_copy(update={"cv_provider": cv_provider})
-            settings = type(settings).model_validate(settings.model_dump())
+            settings = type(settings).model_validate({**settings.model_dump(), **overrides})
         except Exception as error:
             closer()
             print(f"error: invalid CV configuration: {error}", file=sys.stderr)
@@ -131,7 +156,6 @@ def _eval(arguments: argparse.Namespace) -> int:
                 model,
                 settings,
                 model_alias=alias,
-                registry=default_pipeline_registry(),
                 cv_executor=cv_executor,
             )
             outcomes = run_batch(
@@ -141,7 +165,11 @@ def _eval(arguments: argparse.Namespace) -> int:
                 arguments.output,
                 prompt_context=arguments.prompt_context,
                 query=arguments.query,
+                force=arguments.force,
             )
+    except OutputBusyError as error:
+        print(f"error: {error}", file=sys.stderr)
+        return 2
     finally:
         closer()
 
