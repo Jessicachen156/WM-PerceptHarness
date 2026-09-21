@@ -1,161 +1,177 @@
-# Official metric integration PR runbook
+# Category-based official metric integration PR runbook
 
 Date: 2026-09-21
 
-This file describes the **code-and-documentation PR**. It does not claim that this repository has downloaded every checkpoint or run every external judge.
+This guide supersedes the old single-PR workflow. The final list is still 21 main metrics + 5 appendix metrics, but they must be proposed in separate category PRs.
 
-## What this PR contains
+## Non-negotiable PR rule
 
-The PR contains only small adapters around unchanged official evaluators:
+One PR contains one metric category. Do not open one PR whose summary lists all 26 metrics.
 
-- VBench direct dimensions: Imaging Quality, Temporal Flickering, Dynamic Degree, Subject Consistency, Background Consistency, and Overall Consistency;
-- the official VBench competition CLIPScore entry point;
-- the official DOVER command entry point;
-- strict input adapters for WorldModelBench, T2V-CompBench, VBench-2.0, PhyGenBench, and VideoPhy-2;
-- reference-frame pairing for PSNR/SSIM/LPIPS;
-- VideoPhy-2 PC/SA result joining (Joint is a derived field, not a third evaluator);
-- the frozen final metric list and external-run instructions.
+The existing metrics branch is a staging branch that contains the complete integration catalog. It is not a category PR branch. Every category PR must start from upstream/main and contain only the files, functions, tests, and documentation needed for that category.
 
-The repository does not commit model weights, virtual environments, generated videos, prompt answers, or ground-truth frames.
+The repository does not commit model weights, virtual environments, generated videos, prompt answers, judge answers, or ground-truth frames.
 
-## Exact local checks before pushing
+## Status definitions in plain language
 
-Run on the Ali02 checkout:
+### prepared_for_pr
 
-```bash
+This means the repository contains a wrapper or preflight check for the metric. The code checks the pinned official source and required files, passes the official arguments to the unchanged upstream evaluator, and has contract tests.
+
+It means the code is ready for a reviewer to inspect and for a PR to be opened. It does not mean that the official checkpoint is stored in this repository, that a fresh official environment has been installed here, or that the metric has scored the future dataset.
+
+Current prepared_for_pr metrics are MUSIQ / Imaging Quality, DOVER, Temporal Flickering, Dynamic Degree, CLIPScore, ViCLIP / Overall Consistency, Subject Consistency, and Background Consistency.
+
+### external_caller_run
+
+This means this repository does not run the evaluator locally. It validates or preserves the exact official input fields and documents the official command, while the user runs the evaluator in the upstream repository with its own environment, weights, prompts, questions, first frames, auxiliary_info, or reference collection.
+
+It is still possible to submit an input-adapter or official-runbook PR for this category. The PR must say that it provides input compatibility and instructions. It must not say that the metric is locally implemented, smoke-tested, or able to score an arbitrary single video.
+
+Current external_caller_run metrics are Instruction Following, Action Binding, Motion Binding, Motion Order Understanding, Motion Rationality, Object Interactions, PhyGenEval PCA, VideoPhy-2 PC, VideoPhy-2 SA, Mechanics, Thermotics, Material, PSNR, SSIM, LPIPS, FVD, and FID.
+
+## Recommended category PRs
+
+| PR category | Metrics covered by this PR | Files and tests | PR title |
+|---|---|---|---|
+| Image and video quality | MUSIQ / Imaging Quality; DOVER | scripts/score_vbench_official.py (imaging_quality only), scripts/score_dover_official.py, docs/metrics/DOVER.md, tests/test_vbench_official_wrapper.py, tests/test_dover_official_wrapper.py | Add official image and video quality metrics |
+| Motion quality and amount | Motion Smoothness / AMT; Temporal Flickering; Dynamic Degree | scripts/score_vbench_motion_smoothness.py, scripts/score_vbench_official.py (temporal_flickering and dynamic_degree only), tests/test_vbench_motion_script.py, tests/test_vbench_official_wrapper.py | Add official VBench motion-quality metrics |
+| Text-video alignment and consistency | CLIPScore; ViCLIP / Overall Consistency; Subject Consistency; Background Consistency | scripts/score_vbench_clip_score.py, scripts/score_vbench_official.py (overall_consistency, subject_consistency, background_consistency), tests/test_vbench_clip_score_wrapper.py, tests/test_vbench_official_wrapper.py | Add official text-video alignment and consistency metrics |
+| Instruction following | Instruction Following | scripts/official_input_adapters.py: adapt_worldmodelbench, scripts/validate_metric_manifest.py, tests/test_official_input_adapters.py, WorldModelBench section of docs/metrics/OFFICIAL_EXTERNAL_RUNBOOK_20260921.md | Add WorldModelBench instruction-following input adapter |
+| Action and object relations | Action Binding; Motion Binding; Object Interactions | scripts/official_input_adapters.py: adapt_action_binding, adapt_motion_binding, adapt_object_interactions, scripts/validate_metric_manifest.py, tests/test_official_input_adapters.py, T2V-CompBench V2 section of the official runbook | Add T2V-CompBench action and interaction adapters |
+| Temporal reasoning | Motion Order Understanding; Motion Rationality | scripts/official_input_adapters.py: adapt_vbench2, scripts/validate_metric_manifest.py, tests/test_official_input_adapters.py, VBench-2.0 temporal sections of the official runbook | Add VBench-2.0 temporal reasoning adapters |
+| Physical metrics | PhyGenEval PCA; VideoPhy-2 PC; VideoPhy-2 SA; Mechanics; Thermotics; Material | scripts/official_input_adapters.py: validate_phygen_eval, adapt_videophy_csv, adapt_vbench2; scripts/aggregate_videophy_joint.py; tests/test_official_input_adapters.py, tests/test_remaining_data_tools.py; PhyGenBench, VideoPhy-2, and VBench-2.0 sections of the official runbook | Add official physics-metric input adapters |
+| Reference and distribution quality | PSNR; SSIM; LPIPS; FVD; FID | scripts/build_reference_manifest.py, scripts/validate_metric_manifest.py, tests/test_remaining_data_tools.py, official IQA-PyTorch/Google FVD sections of the official runbook | Add reference and distribution metric input manifests |
+
+Motion Smoothness was already submitted and smoke-tested in the earlier PR. If that PR is already merged, the motion-quality PR must not copy the same implementation again; it should contain only the new motion metrics and a link to the earlier PR.
+
+VideoPhy-2 Joint is a derived PC/SA join, not a separate metric. Include aggregate_videophy_joint.py only in the physical-metrics PR and describe it as a post-processing helper.
+
+## Important shared-file rule
+
+Some current files contain more than one category:
+
+- score_vbench_official.py contains several VBench dimensions.
+- official_input_adapters.py contains adapters for several external projects.
+- validate_metric_manifest.py is shared validation infrastructure.
+
+Do not blindly copy one of these whole files into every category branch and call the result category-only. Before opening the category PR, either split the relevant functions into category modules or create a category-specific patch that adds only the required functions and tests. The PR body must name the exact functions included.
+
+The complete file-to-metric catalog remains in docs/metrics/METRIC_FILE_MAP_20260921.md. That catalog is not a reason to include all files in every PR.
+
+## Exact branch and push procedure
+
+Run these commands on Ali02 for each category. Replace CATEGORY with one of image-video-quality, motion-quality, alignment-consistency, instruction-following, action-relations, temporal-reasoning, physical-metrics, or reference-distribution.
+
+~~~bash
 cd /mnt/yiyang-workspace/WM-PerceptHarness
 
-git switch metrics
-git status --short --branch
+git fetch upstream main
 git fetch origin metrics
-git log --oneline --decorate -8
+git switch -c pr/CATEGORY upstream/main
+
+# Bring in only the selected category's files or category-specific patch.
+# Do not merge the complete metrics branch.
+git status --short
+git diff --stat upstream/main...HEAD
 
 PYTHON=/root/metrics_pr_validation_20260919/dev-env/bin/python
-"$PYTHON" -m py_compile \
-  scripts/score_vbench_official.py \
-  scripts/score_vbench_clip_score.py \
-  scripts/score_dover_official.py \
-  scripts/official_input_adapters.py \
-  scripts/validate_metric_manifest.py \
-  scripts/build_reference_manifest.py \
-  scripts/aggregate_videophy_joint.py
-
-"$PYTHON" -m pytest -q \
-  tests/test_vbench_official_wrapper.py \
-  tests/test_vbench_clip_score_wrapper.py \
-  tests/test_dover_official_wrapper.py \
-  tests/test_official_input_adapters.py \
-  tests/test_remaining_data_tools.py \
-  tests/test_vbench_motion_script.py \
-  tests/test_clipiqa_plus_script.py
-
+# Run only the tests listed for this category in the table above.
+"$PYTHON" -m pytest -q SELECTED_TEST_FILES
 git diff --check
-git status --short
-```
+git diff --stat upstream/main...HEAD
 
-On the current `metrics` checkout this command produced `108 passed, 3 skipped` in 1.88 seconds. The system `/usr/local/bin/python` does not contain pytest; use the project validation environment shown above. The tests above are contract tests. They confirm that the wrapper calls the expected official entry point, rejects missing or changed files, preserves official output, and validates metadata. They do not download checkpoints or pretend that an external judge has run.
+git add SELECTED_FILES
+git commit -m "Add CATEGORY official metric integration"
+git push -u origin pr/CATEGORY
+~~~
 
-## Commit and push
+For an already-created local branch, use git switch pr/CATEGORY and continue with the same validation. Do not force-push a shared branch.
 
-Do not create a PR from the fork to itself. Push the branch to the fork first:
+The GitHub target for every PR is:
 
-```bash
-cd /mnt/yiyang-workspace/WM-PerceptHarness
-git add docs/metrics scripts/ requirements/ tests/
-git commit -m "Add official remaining metric integration runbook"
-git push origin metrics
-```
-
-If the branch already contains the same changes, do not make an empty commit.
-
-## Pull request target
-
-The target is:
-
-```text
-head: Jessicachen156/WM-PerceptHarness:metrics
+~~~
+head: Jessicachen156/WM-PerceptHarness:pr/CATEGORY
 base: lindaxhy/WM-PerceptHarness:main
-```
+~~~
 
-Create the PR only after reviewing `git diff upstream/main...metrics`. The fork branch may contain later commits than the already merged PR #10; this is a new proposed change set, not a new PR created by this runbook.
+Before creating the PR, inspect the complete category-only diff:
 
-## PR title
+~~~bash
+git diff --name-status upstream/main...HEAD
+git diff upstream/main...HEAD
+~~~
 
-```text
-Add official integration preflight for remaining video metrics
-```
+If the diff contains another category's evaluator, remove it before opening the PR.
 
-## PR body
+## Category-specific test commands
+
+Image and video quality:
+
+~~~bash
+"$PYTHON" -m pytest -q tests/test_vbench_official_wrapper.py tests/test_dover_official_wrapper.py
+~~~
+
+Motion quality and amount:
+
+~~~bash
+"$PYTHON" -m pytest -q tests/test_vbench_motion_script.py tests/test_vbench_official_wrapper.py
+~~~
+
+Text-video alignment and consistency:
+
+~~~bash
+"$PYTHON" -m pytest -q tests/test_vbench_clip_score_wrapper.py tests/test_vbench_official_wrapper.py
+~~~
+
+Instruction following, action relations, temporal reasoning, and physical metrics:
+
+~~~bash
+"$PYTHON" -m pytest -q tests/test_official_input_adapters.py
+~~~
+
+Reference and distribution quality:
+
+~~~bash
+"$PYTHON" -m pytest -q tests/test_remaining_data_tools.py
+~~~
+
+These are contract tests. They verify official paths, hashes, arguments, and input schemas. They do not download official weights or run external judge models.
+
+## PR body template
+
+Use only the rows for the selected category. Do not paste the 26-metric table into every PR.
 
 ~~~markdown
 ## Summary
 
-This PR freezes the final 26 retained metrics (21 main + 5 appendix) and records exactly which repository file owns each integration. It adds official wrappers, field-preserving adapters, reference manifests, tests, and caller-run instructions. It does not commit model weights or virtual environments.
+- Add the official integration or input adapter for CATEGORY.
+- List the exact metrics covered by this PR.
+- List the exact scripts, tests, and official runbook section changed.
+- Preserve the pinned upstream source, input format, and evaluator behavior.
 
-### Main benchmark (21)
+## Status
 
-| Metric | Repository code package | What this package does |
-|---|---|---|
-| MUSIQ / Imaging Quality | scripts/score_vbench_official.py --dimension imaging_quality | Checks the pinned VBench source and MUSIQ cache, then calls the unchanged official VBench evaluator. |
-| DOVER | scripts/score_dover_official.py | Checks the pinned DOVER source, DOVER.pth, and ConvNeXt cache, then calls the official evaluator. |
-| Motion Smoothness / AMT | scripts/score_vbench_motion_smoothness.py | Existing official VBench AMT integration; already submitted and smoke-tested in the earlier PR. |
-| Temporal Flickering | scripts/score_vbench_official.py --dimension temporal_flickering | Runs the official static/near-static subset preparation and calls the official dimension. |
-| Dynamic Degree | scripts/score_vbench_official.py --dimension dynamic_degree | Checks the official RAFT cache and calls unchanged VBench code. |
-| CLIPScore | scripts/score_vbench_clip_score.py | Builds one-video official metadata and calls competitions/clip_score.py with the original prompt. |
-| ViCLIP / Overall Consistency | scripts/score_vbench_official.py --dimension overall_consistency | Checks the official ViCLIP/BPE assets and original prompt, then calls VBench. |
-| Instruction Following | scripts/official_input_adapters.py: adapt_worldmodelbench | Validates WorldModelBench fields; the official VILA-EWM judge remains caller-run. |
-| Action Binding | scripts/official_input_adapters.py: adapt_action_binding | Preserves T2V-CompBench V2 metadata; the official Grid-LLaVA command remains caller-run. |
-| Motion Binding | scripts/official_input_adapters.py: adapt_motion_binding | Preserves the official Grounded-SAM + DOT two-stage inputs; upstream inference remains caller-run. |
-| Motion Order Understanding | scripts/official_input_adapters.py: adapt_vbench2 | Validates official ordered-action and auxiliary fields; caller runs the VBench-2.0 standard suite. |
-| Motion Rationality | scripts/official_input_adapters.py: adapt_vbench2 | Validates official consequence-question fields; caller runs the standard suite. |
-| Object Interactions | scripts/official_input_adapters.py: adapt_object_interactions | Preserves T2V-CompBench interaction metadata; caller runs the official evaluator. |
-| PhyGenEval PCA | scripts/official_input_adapters.py: validate_phygen_eval | Validates official PhyGenBench question/video layout; caller runs PhyGenEval. |
-| VideoPhy-2 PC | scripts/official_input_adapters.py: adapt_videophy_csv(task=pc) | Validates official PC CSV; caller runs VideoPhy-2 PC. |
-| VideoPhy-2 SA | scripts/official_input_adapters.py: adapt_videophy_csv(task=sa) | Validates official SA CSV (videopath, caption); caller runs VideoPhy-2 SA. |
-| Mechanics | scripts/official_input_adapters.py: adapt_vbench2 | Validates official VBench-2.0 auxiliary fields; caller runs the standard suite. |
-| Thermotics | scripts/official_input_adapters.py: adapt_vbench2 | Validates official VBench-2.0 auxiliary fields; caller runs the standard suite. |
-| Material | scripts/official_input_adapters.py: adapt_vbench2 | Validates official VBench-2.0 auxiliary fields; caller runs the standard suite. |
-| Subject Consistency | scripts/score_vbench_official.py --dimension subject_consistency | Checks the official DINO source/checkpoint and calls unchanged VBench code. |
-| Background Consistency | scripts/score_vbench_official.py --dimension background_consistency | Checks the official CLIP cache and calls unchanged VBench code. |
+State either prepared_for_pr or external_caller_run.
 
-### Appendix (5)
+For prepared_for_pr, say that this repository calls the unchanged official evaluator after checking the configured source and assets. Do not say that weights or environments are bundled.
 
-| Metric | Repository code package | What this package does |
-|---|---|---|
-| PSNR | scripts/build_reference_manifest.py + official runbook | Pairs caller-provided generated/reference frames; official IQA-PyTorch computes the score. |
-| SSIM | scripts/build_reference_manifest.py + official runbook | Uses the same strict frame pairing; no reference frames are invented. |
-| LPIPS | scripts/build_reference_manifest.py + official runbook | Uses the same paired frames; caller runs the official LPIPS implementation. |
-| FVD | docs/metrics/OFFICIAL_EXTERNAL_RUNBOOK_20260921.md + validate_metric_manifest.py | Documents official tensor/statistics inputs and command; this repository has no FVD inference wrapper. |
-| FID | docs/metrics/OFFICIAL_EXTERNAL_RUNBOOK_20260921.md + validate_metric_manifest.py | Documents official feature/statistics inputs and command; this repository has no FID inference wrapper. |
-
-### Shared files and non-counted helpers
-
-- scripts/validate_metric_manifest.py is the common schema guard for video paths, prompts, reference frames, and auxiliary_info; it never invents metadata or scores a video.
-- scripts/aggregate_videophy_joint.py joins official PC and SA outputs and computes SA >= 4 AND PC >= 4; VideoPhy-2 Joint is a derived field, not a 27th evaluator.
-- scripts/score_clipiqa_plus.py remains the previously submitted backup metric and is outside the frozen 26.
-- score_vbench_official.py also retains an Aesthetic Quality diagnostic entry point; Aesthetic Quality is outside the frozen 26.
-- docs/metrics/METRIC_FILE_MAP_20260921.md repeats this mapping in repository form so reviewers can trace every metric to its file.
-
-### Status
-
-The 26 metrics are frozen and each has an official integration path documented. Only Motion Smoothness is already submitted and smoke-tested. The eight additional direct wrappers are prepared_for_pr and still require the caller's official assets/environment. The remaining metrics are external_caller_run: the caller must run the exact upstream environment with official weights and task-owned prompts, questions, first frames, auxiliary metadata, or reference collections. This PR does not claim that all 26 scores have already been produced.
-
-## Official fidelity
-
-The wrappers do not reimplement sampling, preprocessing, model inference, judge prompts, or score formulas. They verify the pinned upstream source and required files, invoke the upstream entry point, retain its original output, and fail when an input or checkpoint is missing.
-
-External evaluators remain caller-run in their official repositories. This repository supplies format validation and commands; it does not replace a judge model with a smaller model.
+For external_caller_run, say that this repository validates the official input contract and documents the upstream command; the evaluator, weights, environment, and task-owned metadata remain caller-run.
 
 ## Validation
 
-- Python compilation passed for all new scripts.
-- Wrapper and schema contract tests passed without downloading model weights (108 passed, 3 skipped).
-- git diff --check is clean.
+- List the category-specific contract-test command and result.
+- State that no model weights or future-dataset scores are included.
 
-## Scope and limitations
+## Scope
 
-This PR is an official integration/preflight contribution. It does not claim that every checkpoint or virtual environment is bundled, and it does not claim that all metrics have been run on the project's future dataset. Users must provide the official checkpoints, the environment described by each upstream project, and task-owned prompts, first frames, auxiliary questions, or reference collections when the metric requires them.
+State that this PR covers only CATEGORY. Do not claim that the other metric categories are included or completed.
 ~~~
-## What the PR must not say
 
-Do not write “all metrics are fully verified” or “all metrics run from one video with no metadata”. The accurate claim is “official integration/preflight is provided; runtime assets and task inputs are caller-owned.”
+## What a reviewer should understand
+
+prepared_for_pr means: the project code has a reviewable official wrapper and preflight contract.
+
+external_caller_run means: the project code has a reviewable official input contract and run instructions, but scoring still happens in the metric author's official environment.
+
+Neither status means that all 26 metrics can accept one arbitrary MP4 with no prompt, first frame, auxiliary metadata, or reference data. The final status registry and the complete mapping are in docs/metrics/FINAL_METRICS.json, docs/metrics/STATUS_REMAINING.json, and docs/metrics/METRIC_FILE_MAP_20260921.md.
