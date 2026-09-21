@@ -389,8 +389,10 @@ def _extract_pinned_jpegs(
                 f"select='{expression}'",
                 "-frames:v",
                 str(len(source_indices)),
-                "-fps_mode:v",
-                "passthrough",
+                # FFmpeg 4.4 (the supported system binary) uses -vsync;
+                # newer releases expose the equivalent -fps_mode:v form.
+                "-vsync",
+                "0",
                 "-c:v",
                 "mjpeg",
                 "-q:v",

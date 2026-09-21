@@ -666,11 +666,17 @@ class CvArtifactStore:
     def _validate_ancestor_status(status: os.stat_result, *, final: bool) -> None:
         effective_uid = os.geteuid() if hasattr(os, "geteuid") else status.st_uid
         trusted_owners = {effective_uid, 0}
+        writable = bool(status.st_mode & 0o022)
+        trusted_sticky_ancestor = (
+            not final
+            and status.st_uid == 0
+            and bool(status.st_mode & stat.S_ISVTX)
+        )
         if (
             not stat.S_ISDIR(status.st_mode)
             or status.st_uid not in trusted_owners
             or (final and status.st_uid != effective_uid)
-            or status.st_mode & 0o022
+            or (writable and not trusted_sticky_ancestor)
         ):
             raise ValueError
 
@@ -1204,6 +1210,25 @@ class CvArtifactStore:
                     self._stat_signature(opened) != self._stat_signature(current_descriptor)
                     or self._stat_signature(opened) != self._stat_signature(current_path)
                     or self._stat_signature(opened) != after[relative]
+                ):
+                    raise ValueError
+            # File timestamps are not a reliable content-change signal on every
+            # filesystem. Re-read each already-open descriptor and confirm its
+            # digest after the tree and inode checks, so an in-place replacement
+            # that preserves size and coarse-grained timestamps cannot pass.
+            for file in artifact.files:
+                descriptor = opened_files[file.path][0]
+                os.lseek(descriptor, 0, os.SEEK_SET)
+                confirmation = hashlib.sha256()
+                confirmation_size = 0
+                while chunk := os.read(descriptor, _STREAM_BYTES):
+                    confirmation_size += len(chunk)
+                    if confirmation_size > self._max_bytes:
+                        raise ValueError
+                    confirmation.update(chunk)
+                if (
+                    confirmation_size != file.size_bytes
+                    or confirmation.hexdigest() != file.sha256
                 ):
                     raise ValueError
 

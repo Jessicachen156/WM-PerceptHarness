@@ -2451,9 +2451,15 @@ assert Sam31EvidenceProvider is not None
 assert not any(name == 'sam3' or name.startswith('sam3.') for name in sys.modules)
 """
 
+    child_env = os.environ.copy()
+    source_root = str(repository_root / "src")
+    child_env["PYTHONPATH"] = os.pathsep.join(
+        part for part in (source_root, child_env.get("PYTHONPATH", "")) if part
+    )
     completed = subprocess.run(
         [sys.executable, "-c", script],
         cwd=repository_root,
+        env=child_env,
         capture_output=True,
         text=True,
         check=False,

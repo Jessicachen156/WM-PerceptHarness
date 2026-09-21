@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import math
+import os
 from pathlib import Path
 import re
 import subprocess
@@ -1604,6 +1605,11 @@ def test_candidate_builder_rejects_unsafe_cross_track_frame_time_conflicts() -> 
 
 def test_summary_module_imports_no_gpu_or_sam_runtime() -> None:
     """Importing prompt summarization must remain safe in the core environment."""
+    child_env = os.environ.copy()
+    source_root = str(Path(__file__).resolve().parents[1] / "src")
+    child_env["PYTHONPATH"] = os.pathsep.join(
+        part for part in (source_root, child_env.get("PYTHONPATH", "")) if part
+    )
     completed = subprocess.run(
         [
             sys.executable,
@@ -1615,6 +1621,7 @@ def test_summary_module_imports_no_gpu_or_sam_runtime() -> None:
                 "for name in sys.modules)"
             ),
         ],
+        env=child_env,
         check=False,
         capture_output=True,
         text=True,

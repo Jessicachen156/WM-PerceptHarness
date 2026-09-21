@@ -545,3 +545,7 @@ results/imaging_quality_smoke_001/
 8. 最后才对全部视频批量运行。
 
 完整 75 条不是第一步。第一步是确保每个指标的官方入口、输入格式、权重、环境和一条 smoke test 都能被复核。
+
+## 2026-09-21 VBench cache note
+
+When the model cache is mounted read-only, Subject Consistency also needs a writable Torch hub cache. Pass the wrapper option --torch-home /root/official_video_metrics_20260918/runtime/vbench_torch_home. The wrapper verifies the official DINO source files, the DINO checkpoint, and the actual Torch hub path torch_home/hub/checkpoints/dino_vitbase16_pretrain.pth; it never downloads a replacement checkpoint.

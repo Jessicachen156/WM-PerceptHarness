@@ -1,6 +1,9 @@
 {
-  "updated": "2026-09-20",
-  "baseline_pr": ["clipiqa_plus", "vbench_motion_smoothness"],
+  "updated": "2026-09-21",
+  "baseline_pr": [
+    "clipiqa_plus",
+    "vbench_motion_smoothness"
+  ],
   "prepared_here": [
     "vbench_direct_wrapper",
     "vbench_clip_score_wrapper",
@@ -9,33 +12,151 @@
     "videophy_joint_analysis"
   ],
   "main_benchmark": [
-    {"metric": "musiq_imaging_quality", "status": "conditional", "blocker": "cache mapping and smoke test"},
-    {"metric": "dover", "status": "blocked", "blocker": "DOVER.pth and Torch 1.13-compatible environment"},
-    {"metric": "motion_smoothness", "status": "submitted", "blocker": null},
-    {"metric": "temporal_flickering", "status": "conditional", "blocker": "frozen static/near-static subset"},
-    {"metric": "dynamic_degree", "status": "conditional", "blocker": "RAFT cache mapping and smoke test"},
-    {"metric": "clip_score", "status": "conditional", "blocker": "ViT-B/32 plus frozen prompt mapping"},
-    {"metric": "overall_consistency", "status": "conditional", "blocker": "ViCLIP plus video-to-prompt manifest"},
-    {"metric": "instruction_following", "status": "blocked", "blocker": "WorldModelBench/VILA judge and data layout"},
-    {"metric": "action_binding", "status": "blocked", "blocker": "T2V-CompBench LLaVA environment and metadata"},
-    {"metric": "motion_binding", "status": "blocked", "blocker": "Grounded-SAM/DOT official pipeline"},
-    {"metric": "motion_order_understanding", "status": "blocked", "blocker": "VBench-2.0 auxiliary_info and LLaVA-Video/Qwen"},
-    {"metric": "motion_rationality", "status": "blocked", "blocker": "VBench-2.0 consequence questions and LLaVA-Video"},
-    {"metric": "object_interactions", "status": "blocked", "blocker": "T2V-CompBench interaction metadata and judge"},
-    {"metric": "phygen_eval_pca", "status": "blocked", "blocker": "PhyGenBench models/environment"},
-    {"metric": "video_phy_pc", "status": "blocked", "blocker": "VideoPhy-2 checkpoint/environment"},
-    {"metric": "video_phy_sa", "status": "blocked", "blocker": "VideoPhy-2 checkpoint/environment"},
-    {"metric": "mechanics", "status": "blocked", "blocker": "VBench-2.0 auxiliary_info and LLaVA-Video"},
-    {"metric": "thermotics", "status": "blocked", "blocker": "VBench-2.0 auxiliary_info and LLaVA-Video"},
-    {"metric": "material", "status": "blocked", "blocker": "VBench-2.0 auxiliary_info and LLaVA-Video"},
-    {"metric": "subject_consistency", "status": "conditional", "blocker": "DINO cache mapping and smoke test"},
-    {"metric": "background_consistency", "status": "conditional", "blocker": "ViT-B/32 cache mapping and smoke test"}
+    {
+      "metric": "musiq_imaging_quality",
+      "status": "scored_unverified_runtime",
+      "blocker": "Real official-source single-video smoke passed, but current host runtime is torch2.10/cu128 with numpy2/timm1.0.28/transformers5.8.1; strict VBench requirements and CUDA gate are not yet satisfied.",
+      "evidence": "/root/official_video_metrics_20260918/results/vbench_visual_smoke_0582_final2/"
+    },
+    {
+      "metric": "dover",
+      "status": "blocked",
+      "blocker": "DOVER.pth and Torch 1.13-compatible environment"
+    },
+    {
+      "metric": "motion_smoothness",
+      "status": "submitted",
+      "blocker": null
+    },
+    {
+      "metric": "temporal_flickering",
+      "status": "conditional",
+      "blocker": "No frozen static/near-static subset and excluded-count rule."
+    },
+    {
+      "metric": "dynamic_degree",
+      "status": "scored_unverified_runtime",
+      "blocker": "Real official-source single-video smoke passed, but current host runtime is torch2.10/cu128 with numpy2/timm1.0.28/transformers5.8.1; strict VBench requirements and CUDA gate are not yet satisfied.",
+      "evidence": "/root/official_video_metrics_20260918/results/vbench_visual_smoke_0582_final2/"
+    },
+    {
+      "metric": "clip_score",
+      "status": "conditional",
+      "blocker": "Exact task-level video-to-prompt manifest and strict official runtime smoke remain unresolved."
+    },
+    {
+      "metric": "overall_consistency",
+      "status": "conditional",
+      "blocker": "The smoke video concatenates two segments and only seg_000 prompt was available; exact task-level video-to-prompt manifest is unresolved."
+    },
+    {
+      "metric": "instruction_following",
+      "status": "blocked",
+      "blocker": "WorldModelBench/VILA judge and data layout"
+    },
+    {
+      "metric": "action_binding",
+      "status": "blocked",
+      "blocker": "T2V-CompBench LLaVA environment and metadata"
+    },
+    {
+      "metric": "motion_binding",
+      "status": "blocked",
+      "blocker": "Grounded-SAM/DOT official pipeline"
+    },
+    {
+      "metric": "motion_order_understanding",
+      "status": "blocked",
+      "blocker": "VBench-2.0 auxiliary_info and LLaVA-Video/Qwen"
+    },
+    {
+      "metric": "motion_rationality",
+      "status": "blocked",
+      "blocker": "VBench-2.0 consequence questions and LLaVA-Video"
+    },
+    {
+      "metric": "object_interactions",
+      "status": "blocked",
+      "blocker": "T2V-CompBench interaction metadata and judge"
+    },
+    {
+      "metric": "phygen_eval_pca",
+      "status": "blocked",
+      "blocker": "PhyGenBench models/environment"
+    },
+    {
+      "metric": "video_phy_pc",
+      "status": "blocked",
+      "blocker": "VideoPhy-2 checkpoint/environment"
+    },
+    {
+      "metric": "video_phy_sa",
+      "status": "blocked",
+      "blocker": "VideoPhy-2 checkpoint/environment"
+    },
+    {
+      "metric": "mechanics",
+      "status": "blocked",
+      "blocker": "VBench-2.0 auxiliary_info and LLaVA-Video"
+    },
+    {
+      "metric": "thermotics",
+      "status": "blocked",
+      "blocker": "VBench-2.0 auxiliary_info and LLaVA-Video"
+    },
+    {
+      "metric": "material",
+      "status": "blocked",
+      "blocker": "VBench-2.0 auxiliary_info and LLaVA-Video"
+    },
+    {
+      "metric": "subject_consistency",
+      "status": "scored_unverified_runtime",
+      "blocker": "Real official-source single-video smoke passed, but current host runtime is torch2.10/cu128 with numpy2/timm1.0.28/transformers5.8.1; strict VBench requirements and CUDA gate are not yet satisfied.",
+      "evidence": "/root/official_video_metrics_20260918/results/vbench_visual_smoke_0582_final2/"
+    },
+    {
+      "metric": "background_consistency",
+      "status": "scored_unverified_runtime",
+      "blocker": "Real official-source single-video smoke passed, but current host runtime is torch2.10/cu128 with numpy2/timm1.0.28/transformers5.8.1; strict VBench requirements and CUDA gate are not yet satisfied.",
+      "evidence": "/root/official_video_metrics_20260918/results/vbench_visual_smoke_0582_final2/"
+    }
   ],
   "appendix": [
-    {"metric": "psnr", "status": "conditional", "blocker": "aligned future reference frames"},
-    {"metric": "ssim", "status": "conditional", "blocker": "aligned future reference frames"},
-    {"metric": "lpips", "status": "conditional", "blocker": "aligned future reference frames"},
-    {"metric": "fvd", "status": "blocked", "blocker": "matched real video set and TensorFlow/TF-Hub environment"},
-    {"metric": "fid", "status": "blocked", "blocker": "matched real frame set/statistics and fixed feature environment"}
-  ]
+    {
+      "metric": "psnr",
+      "status": "conditional",
+      "blocker": "aligned future reference frames"
+    },
+    {
+      "metric": "ssim",
+      "status": "conditional",
+      "blocker": "aligned future reference frames"
+    },
+    {
+      "metric": "lpips",
+      "status": "conditional",
+      "blocker": "aligned future reference frames"
+    },
+    {
+      "metric": "fvd",
+      "status": "blocked",
+      "blocker": "matched real video set and TensorFlow/TF-Hub environment"
+    },
+    {
+      "metric": "fid",
+      "status": "blocked",
+      "blocker": "matched real frame set/statistics and fixed feature environment"
+    }
+  ],
+  "runtime_status": {
+    "qualified_status_meaning": "scored_unverified_runtime means the unchanged official source emitted and wrapper-validated a real score, but the host environment has not passed the official dependency/CUDA compatibility gate.",
+    "strict_b_status_gate": [
+      "official source revision and source fingerprint match",
+      "all required checkpoint hashes match",
+      "exact original prompt/metadata mapping exists",
+      "official-compatible environment passes pip check and the declared CUDA/Torch gate",
+      "one real official invocation emits a validated result and its log is preserved"
+    ]
+  }
 }

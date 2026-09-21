@@ -162,3 +162,10 @@ python scripts/validate_metric_manifest.py \
 Do not fill a prompt, action order, physical question, or reference path from
 an automatic caption of the generated result.  Those fields are task inputs
 and must be frozen from the original task design.
+
+## 2026-09-21 validation update
+
+- The unchanged pinned VBench source has now emitted and passed wrapper validation for Imaging Quality, Dynamic Degree, Subject Consistency and Background Consistency on one real MP4. Evidence and raw logs remain outside Git under /root/official_video_metrics_20260918/results/vbench_visual_smoke_0582_final2/.
+- These four runs are recorded as scored_unverified_runtime, not strict score-ready B: the host image is Torch 2.10/CUDA 12.8 with NumPy 2.2.6, timm 1.0.28 and transformers 5.8.1, while the official base requirements declare NumPy <2, timm <=1.0.12, transformers 4.33.2 and CUDA 11.6/11.7/11.8/12.1.
+- Aesthetic Quality was run only as a diagnostic. Overall Consistency was not accepted as B evidence because the selected MP4 concatenates two segments and the available prompt file covers only the first segment. CLIPScore has the same exact-prompt requirement and has not been promoted.
+- The full repository test gate and the isolated VBench dependency gate must pass before changing any of these statuses to scored.

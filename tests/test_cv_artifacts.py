@@ -1165,9 +1165,15 @@ def test_fifo_manifest_lookup_returns_promptly_without_writer(tmp_path, cv_reque
         "print(CvArtifactStore(Path(__import__('sys').argv[1])).lookup(__import__('sys').argv[2]))"
     )
 
+    child_env = os.environ.copy()
+    source_root = str(Path(__file__).resolve().parents[1] / "src")
+    child_env["PYTHONPATH"] = os.pathsep.join(
+        part for part in (source_root, child_env.get("PYTHONPATH", "")) if part
+    )
     completed = subprocess.run(
         [sys.executable, "-c", script, str(root), key],
         cwd=Path.cwd(),
+        env=child_env,
         capture_output=True,
         text=True,
         timeout=2,
