@@ -121,6 +121,8 @@ def preflight(*, metric: str, source_dir: Path | None, checkpoint: Path | None,
         spec = SPECS[metric]
     except KeyError as exc:
         raise ValueError(f"unknown external metric: {metric}") from exc
+    if spec.needs_source and source_dir is None:
+        raise ValueError(f"{metric} requires --source-dir (use the pinned official checkout)")
     source = _resolved(source_dir, label="source-dir", directory=True) if spec.needs_source else None
     if source is not None:
         revision = verify_revision(source, spec.revision, runner=runner)
