@@ -1,0 +1,15 @@
+# Direct official CLIPScore import dependencies; not an upstream environment lock.
+# Install a hardware-compatible torch/torchvision pair separately.
+numpy<2
+Pillow
+decord==0.6.0
+openai-clip==1.0.1
+tqdm
+opencv-python<4.12
+PyYAML
+scenedetect>=0.6,<0.7
+moviepy<2
+scipy
+easydict
+ftfy
+regex

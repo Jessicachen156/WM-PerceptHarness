@@ -240,6 +240,14 @@ Add `--check-only` to verify inputs, source and weights without starting inferen
 
 CLIPScore, DOVER and other external evaluators have separate entries in the [metric guide](docs/metrics.md#vbench-and-external-evaluators). Their availability as commands does not imply a completed full-benchmark validation.
 
+The [standalone metric packages](metric_packages/README.md) additionally provide
+reviewed source, examples and documented adaptations for SA, PC, Object
+Interactions, CLIPScore, PSNR, Dynamic Degree and Motion Smoothness. Each uses
+its own runtime; these source directories are separate from the commands above.
+They include official implementations and distinguish optional modified
+sampling, alignment or input-memory behavior. Motion Rationality is excluded
+from this addition.
+
 ## Documentation
 
 | Guide | Contents |

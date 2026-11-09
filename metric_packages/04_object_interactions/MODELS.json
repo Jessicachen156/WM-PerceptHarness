@@ -1,0 +1,236 @@
+{
+  "models": [
+    {
+      "repo_id": "liuhaotian/llava-v1.6-34b",
+      "revision": "6754aa86582435ae12ef47db2de51180f0968aa7",
+      "files": [
+        {
+          "name": "README.md",
+          "size": 1548,
+          "sha256": null,
+          "git_blob_id": "8ff4b2079041452d70ff0af3434c8dbc8a4e4ee0",
+          "official_url": "https://huggingface.co/liuhaotian/llava-v1.6-34b/resolve/6754aa86582435ae12ef47db2de51180f0968aa7/README.md"
+        },
+        {
+          "name": "config.json",
+          "size": 1718,
+          "sha256": null,
+          "git_blob_id": "2ddf9749fa0ac2a8a46f811328a4f5237b3f72e4",
+          "official_url": "https://huggingface.co/liuhaotian/llava-v1.6-34b/resolve/6754aa86582435ae12ef47db2de51180f0968aa7/config.json"
+        },
+        {
+          "name": "generation_config.json",
+          "size": 132,
+          "sha256": null,
+          "git_blob_id": "930804ef2d063bba485f3d92b77fd85d652f5d24",
+          "official_url": "https://huggingface.co/liuhaotian/llava-v1.6-34b/resolve/6754aa86582435ae12ef47db2de51180f0968aa7/generation_config.json"
+        },
+        {
+          "name": "model-00001-of-00015.safetensors",
+          "size": 4793145184,
+          "sha256": "828f7a112fb405c6165f61bdbe73d37dbc877b9acbfd3f95d3d774b19f28fb0a",
+          "git_blob_id": "f4c91d1033f54c668ced9279d3ce996f9aba2540",
+          "official_url": "https://huggingface.co/liuhaotian/llava-v1.6-34b/resolve/6754aa86582435ae12ef47db2de51180f0968aa7/model-00001-of-00015.safetensors"
+        },
+        {
+          "name": "model-00002-of-00015.safetensors",
+          "size": 4756459720,
+          "sha256": "6e83b1c1bc201f3903ee671d70ff98d50f9dc4c38f16cedad5b635783bfdbdc6",
+          "git_blob_id": "083e616f0d4e9d9a37cdde7a628abdaea958a71b",
+          "official_url": "https://huggingface.co/liuhaotian/llava-v1.6-34b/resolve/6754aa86582435ae12ef47db2de51180f0968aa7/model-00002-of-00015.safetensors"
+        },
+        {
+          "name": "model-00003-of-00015.safetensors",
+          "size": 4991370136,
+          "sha256": "88e4fd3c8aa341a11dc491720a89629d23a6a3dddfa581c7aaaa785919fb10cc",
+          "git_blob_id": "6fda41160bd71ff7f9db2d755075208743af00f9",
+          "official_url": "https://huggingface.co/liuhaotian/llava-v1.6-34b/resolve/6754aa86582435ae12ef47db2de51180f0968aa7/model-00003-of-00015.safetensors"
+        },
+        {
+          "name": "model-00004-of-00015.safetensors",
+          "size": 4756459760,
+          "sha256": "39c1fa0735250da2605261c964da56a7774828b3912ad9116d2e381465e825d9",
+          "git_blob_id": "5693925fb68998b1af10a08cff21820c7c6ea3ed",
+          "official_url": "https://huggingface.co/liuhaotian/llava-v1.6-34b/resolve/6754aa86582435ae12ef47db2de51180f0968aa7/model-00004-of-00015.safetensors"
+        },
+        {
+          "name": "model-00005-of-00015.safetensors",
+          "size": 4756459760,
+          "sha256": "03879273628c27793f492b44358d308b522b41dea64cd0a5a61a09ccf8a53f79",
+          "git_blob_id": "d540961e148ab41c4191ca64c8bacca8407bacf3",
+          "official_url": "https://huggingface.co/liuhaotian/llava-v1.6-34b/resolve/6754aa86582435ae12ef47db2de51180f0968aa7/model-00005-of-00015.safetensors"
+        },
+        {
+          "name": "model-00006-of-00015.safetensors",
+          "size": 4991370160,
+          "sha256": "538401289be9a686138bb0104e7557e96e01c52bff56f814db4775da0ffda170",
+          "git_blob_id": "d401ad24dbac05e475c135ac8eb0fe1b7b7e339d",
+          "official_url": "https://huggingface.co/liuhaotian/llava-v1.6-34b/resolve/6754aa86582435ae12ef47db2de51180f0968aa7/model-00006-of-00015.safetensors"
+        },
+        {
+          "name": "model-00007-of-00015.safetensors",
+          "size": 4756459760,
+          "sha256": "d45ac41ae4850b61984734f907b404ecd2d81a20e12a82ad14e8ee7dd0a62b93",
+          "git_blob_id": "6a7b263c59aff2002fdd94ae28cd94b7cb93d516",
+          "official_url": "https://huggingface.co/liuhaotian/llava-v1.6-34b/resolve/6754aa86582435ae12ef47db2de51180f0968aa7/model-00007-of-00015.safetensors"
+        },
+        {
+          "name": "model-00008-of-00015.safetensors",
+          "size": 4756459760,
+          "sha256": "985f5e043c3e60757aa5038b1baa73cf3bbd14b9fa787544a269e9819e1f02cc",
+          "git_blob_id": "5e001ce37b448409a0c8fa8a141e4a7ddc174ad9",
+          "official_url": "https://huggingface.co/liuhaotian/llava-v1.6-34b/resolve/6754aa86582435ae12ef47db2de51180f0968aa7/model-00008-of-00015.safetensors"
+        },
+        {
+          "name": "model-00009-of-00015.safetensors",
+          "size": 4991370160,
+          "sha256": "ad9df69367dea243e060167202d0e652825dc380abd6d47652f709bea2d647a8",
+          "git_blob_id": "a4948333c50c5928a20828699f691f98c65aec14",
+          "official_url": "https://huggingface.co/liuhaotian/llava-v1.6-34b/resolve/6754aa86582435ae12ef47db2de51180f0968aa7/model-00009-of-00015.safetensors"
+        },
+        {
+          "name": "model-00010-of-00015.safetensors",
+          "size": 4756459760,
+          "sha256": "c2379a0a32a2adde840006ae71002b23252b80731efb87822b1d9615b8f782bf",
+          "git_blob_id": "a3a6628d484999ac73beeac4affd889788f236c0",
+          "official_url": "https://huggingface.co/liuhaotian/llava-v1.6-34b/resolve/6754aa86582435ae12ef47db2de51180f0968aa7/model-00010-of-00015.safetensors"
+        },
+        {
+          "name": "model-00011-of-00015.safetensors",
+          "size": 4756459760,
+          "sha256": "1e3c3690a2db5022b76895ed6993b6b999f389119841f93e63e3e4c9744f26f4",
+          "git_blob_id": "871c3760b35b69553be11578cc6d531228cafe51",
+          "official_url": "https://huggingface.co/liuhaotian/llava-v1.6-34b/resolve/6754aa86582435ae12ef47db2de51180f0968aa7/model-00011-of-00015.safetensors"
+        },
+        {
+          "name": "model-00012-of-00015.safetensors",
+          "size": 4991370160,
+          "sha256": "4b869db44714f673fd16715085210edf6cff9bc6abc00b84a9a21ee1d3943f54",
+          "git_blob_id": "8c0ce8655309aef78833524fbfc39e7b8854c24f",
+          "official_url": "https://huggingface.co/liuhaotian/llava-v1.6-34b/resolve/6754aa86582435ae12ef47db2de51180f0968aa7/model-00012-of-00015.safetensors"
+        },
+        {
+          "name": "model-00013-of-00015.safetensors",
+          "size": 4756459760,
+          "sha256": "94f5588ffc27c1dce8cb8cf9d15be1409ac25167fc66c283b102b5aadcd290c8",
+          "git_blob_id": "82e3927becca1dfe957699c6774bf9250a655b41",
+          "official_url": "https://huggingface.co/liuhaotian/llava-v1.6-34b/resolve/6754aa86582435ae12ef47db2de51180f0968aa7/model-00013-of-00015.safetensors"
+        },
+        {
+          "name": "model-00014-of-00015.safetensors",
+          "size": 4756459760,
+          "sha256": "8d8cbc9a93dc72c8cb540700a1f76ce18d579aa7b04794ab8d4a0c03c460ea56",
+          "git_blob_id": "f00ba3d3025c329907517def37df2ee6f4ad2618",
+          "official_url": "https://huggingface.co/liuhaotian/llava-v1.6-34b/resolve/6754aa86582435ae12ef47db2de51180f0968aa7/model-00014-of-00015.safetensors"
+        },
+        {
+          "name": "model-00015-of-00015.safetensors",
+          "size": 1935694744,
+          "sha256": "78fd0f00df0668a014e2f5b1629c03cada2169133a88aca233cf41e79a7c5055",
+          "git_blob_id": "4530aef172584086c0d58019d23990abf1730bff",
+          "official_url": "https://huggingface.co/liuhaotian/llava-v1.6-34b/resolve/6754aa86582435ae12ef47db2de51180f0968aa7/model-00015-of-00015.safetensors"
+        },
+        {
+          "name": "model.safetensors.index.json",
+          "size": 94019,
+          "sha256": null,
+          "git_blob_id": "4ab2a60d79a801c65f6042e72bafa982882566d2",
+          "official_url": "https://huggingface.co/liuhaotian/llava-v1.6-34b/resolve/6754aa86582435ae12ef47db2de51180f0968aa7/model.safetensors.index.json"
+        },
+        {
+          "name": "special_tokens_map.json",
+          "size": 456,
+          "sha256": null,
+          "git_blob_id": "8d66f61fa09a2da95aed3b8a9d1dc3d1f9bbf0ca",
+          "official_url": "https://huggingface.co/liuhaotian/llava-v1.6-34b/resolve/6754aa86582435ae12ef47db2de51180f0968aa7/special_tokens_map.json"
+        },
+        {
+          "name": "tokenizer.model",
+          "size": 1033105,
+          "sha256": "386c49cf943d71aa110361135338c50e38beeff0a66593480421f37b319e1a39",
+          "git_blob_id": "8306c8232dd5cff9e4674594e06981dedd8c1a03",
+          "official_url": "https://huggingface.co/liuhaotian/llava-v1.6-34b/resolve/6754aa86582435ae12ef47db2de51180f0968aa7/tokenizer.model"
+        },
+        {
+          "name": "tokenizer_config.json",
+          "size": 1594,
+          "sha256": null,
+          "git_blob_id": "27783939c3def712e137ac0f1b9cb2721945d4e3",
+          "official_url": "https://huggingface.co/liuhaotian/llava-v1.6-34b/resolve/6754aa86582435ae12ef47db2de51180f0968aa7/tokenizer_config.json"
+        }
+      ]
+    },
+    {
+      "repo_id": "openai/clip-vit-large-patch14-336",
+      "revision": "ce19dc912ca5cd21c8a653c79e251e808ccabcd1",
+      "files": [
+        {
+          "name": "README.md",
+          "size": 1045,
+          "sha256": null,
+          "git_blob_id": "119dfc21c8e97d46a9be63cc69039ea5ef40d387",
+          "official_url": "https://huggingface.co/openai/clip-vit-large-patch14-336/resolve/ce19dc912ca5cd21c8a653c79e251e808ccabcd1/README.md"
+        },
+        {
+          "name": "config.json",
+          "size": 4757,
+          "sha256": null,
+          "git_blob_id": "e9c5a5dc325b017eda0b6e802f79283a1f68bf27",
+          "official_url": "https://huggingface.co/openai/clip-vit-large-patch14-336/resolve/ce19dc912ca5cd21c8a653c79e251e808ccabcd1/config.json"
+        },
+        {
+          "name": "merges.txt",
+          "size": 524657,
+          "sha256": null,
+          "git_blob_id": "bbfec752c9a675946c6dce106def6f35c882dcc2",
+          "official_url": "https://huggingface.co/openai/clip-vit-large-patch14-336/resolve/ce19dc912ca5cd21c8a653c79e251e808ccabcd1/merges.txt"
+        },
+        {
+          "name": "preprocessor_config.json",
+          "size": 316,
+          "sha256": null,
+          "git_blob_id": "a4604d0a1564fa0c45a6ff087bada5066a6335ea",
+          "official_url": "https://huggingface.co/openai/clip-vit-large-patch14-336/resolve/ce19dc912ca5cd21c8a653c79e251e808ccabcd1/preprocessor_config.json"
+        },
+        {
+          "name": "pytorch_model.bin",
+          "size": 1711974081,
+          "sha256": "c6032c2e0caae3dc2d4fba35535fa6307dbb49df59c7e182b1bc4b3329b81801",
+          "git_blob_id": "d599938f87909461098a7856a49c4842c84fc214",
+          "official_url": "https://huggingface.co/openai/clip-vit-large-patch14-336/resolve/ce19dc912ca5cd21c8a653c79e251e808ccabcd1/pytorch_model.bin"
+        },
+        {
+          "name": "special_tokens_map.json",
+          "size": 389,
+          "sha256": null,
+          "git_blob_id": "9bfb42aa97dcd61e89f279ccaee988bccb4fabae",
+          "official_url": "https://huggingface.co/openai/clip-vit-large-patch14-336/resolve/ce19dc912ca5cd21c8a653c79e251e808ccabcd1/special_tokens_map.json"
+        },
+        {
+          "name": "tokenizer.json",
+          "size": 2224041,
+          "sha256": null,
+          "git_blob_id": "564c0ebd5ce29c4ee4864004aee693deadd3128c",
+          "official_url": "https://huggingface.co/openai/clip-vit-large-patch14-336/resolve/ce19dc912ca5cd21c8a653c79e251e808ccabcd1/tokenizer.json"
+        },
+        {
+          "name": "tokenizer_config.json",
+          "size": 844,
+          "sha256": null,
+          "git_blob_id": "24feaf785502565f990d348aafa501c254710ed8",
+          "official_url": "https://huggingface.co/openai/clip-vit-large-patch14-336/resolve/ce19dc912ca5cd21c8a653c79e251e808ccabcd1/tokenizer_config.json"
+        },
+        {
+          "name": "vocab.json",
+          "size": 862328,
+          "sha256": null,
+          "git_blob_id": "182766ce89b439768edadda342519f33802f5364",
+          "official_url": "https://huggingface.co/openai/clip-vit-large-patch14-336/resolve/ce19dc912ca5cd21c8a653c79e251e808ccabcd1/vocab.json"
+        }
+      ]
+    }
+  ],
+  "downloaded_in_this_packaging_run": false,
+  "historical_backend": "curl HTTP Range --continue-at -; preserve partial files, paths, backend and authentication environment across restart",
+  "scope": "Public upstream metadata and fixed revision pointers; local checkpoint bytes not rehashed during packaging."
+}

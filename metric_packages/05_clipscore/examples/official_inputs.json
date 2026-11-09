@@ -1,0 +1,7 @@
+[
+  {
+    "prompt_en": "A person opens a door.",
+    "dimension": ["clip_score"],
+    "video_list": ["/absolute/path/to/video.mp4"]
+  }
+]

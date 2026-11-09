@@ -1,0 +1,23 @@
+# Partial reproducibility record, NOT a complete lockfile.
+# Directly recorded by the Object Interactions runtime on 2026-10-10:
+# Python 3.10.12, GCC 11.4.0; Torch wheel CUDA build suffix not recorded here.
+torch==2.10.0
+transformers==4.37.2
+accelerate==0.21.0
+numpy==1.26.4
+opencv-python==4.9.0.80
+Pillow==12.3.0
+# Additional versions explicitly requested by the shared inference setup:
+tokenizers==0.15.1
+sentencepiece==0.1.99
+timm==0.6.13
+einops==0.6.1
+einops-exts==0.0.4
+av==12.1.0
+scipy==1.13.0
+# Other setup packages were not pinned/observed in this OI snapshot:
+# shortuuid, requests, packaging, setuptools<81, wheel.
+# torchvision is required by official imports, but its exact OI runtime version
+# was not captured. Select the correct companion build for Torch 2.10.0 and
+# validate it; do not call this a fully reproduced environment until checked.
+# Install upstream LLaVA separately with --no-deps --no-build-isolation.

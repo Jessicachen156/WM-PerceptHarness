@@ -31,6 +31,16 @@ The following code is preparation/integration support. Local checks do not estab
 | VideoPhy-2 Joint analysis | `percept score videophy-joint` | Official PC/SA outputs matched by video ID; Joint is not an independent metric |
 | Manifest preflight | `scripts/validate_metric_manifest.py` | Caller-provided frozen input metadata; no missing prompts or references are generated |
 
+## Standalone source packages
+
+For the additional standalone SA/PC, Object Interactions, CLIPScore, PSNR,
+Dynamic Degree and Motion Smoothness source packages, use their
+[package index and individual READMEs](../metric_packages/README.md). They
+provide the previously separate scoring code and documented modifications;
+the external launcher and official harness commands above keep their existing
+behavior. Package file verification and CLI tests do not establish real-model
+inference or improved judge accuracy.
+
 ## Checkpoint preparation
 
 `pip install` installs Python packages, not model weights. Use the explicit

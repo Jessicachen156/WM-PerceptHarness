@@ -1,0 +1,56 @@
+{
+  "metric": "object_interactions",
+  "files": [
+    {
+      "path": "arguments.example.json",
+      "bytes": 414,
+      "sha256": "30de7ea5307464c78138b3d3376af6f2837ea8a82a932a40d25ca66fdcb0c782"
+    },
+    {
+      "path": "MODELS.json",
+      "bytes": 12550,
+      "sha256": "197fa966f22d500e566ee2f8f3591660bc4bcbc7fb13c5e57de7a6c3b6f85c12"
+    },
+    {
+      "path": "official/LLaVA/LICENSE",
+      "bytes": 11357,
+      "sha256": "c71d239df91726fc519c6eb72d318ec65820627232b2f796219e87dcf35d0ab4"
+    },
+    {
+      "path": "official/LLaVA/llava/eval/compbench_eval_interaction.py",
+      "bytes": 23144,
+      "sha256": "1b41b8d37d211844cab8c4eef9bce024d0d3ccce22db82b606e58a2e40a48a0c"
+    },
+    {
+      "path": "official/LLaVA/llava/model/builder.py",
+      "bytes": 8761,
+      "sha256": "901a83fe993168b60e5632872ce230aa23e7c404e5e1b3f1ea04cd13d6dc9b81"
+    },
+    {
+      "path": "official/LLaVA/pyproject.toml",
+      "bytes": 1633,
+      "sha256": "eb96c1d4dfb9478b64d971b90bc6e5b1e834570c649d0ffa7e6dbda68ad667d4"
+    },
+    {
+      "path": "README.md",
+      "bytes": 3391,
+      "sha256": "db07c8cea23921e44c8ec29c8dc892c82e3afdfdd0c5e44cb0089e8b59ff1605"
+    },
+    {
+      "path": "requirements.txt",
+      "bytes": 956,
+      "sha256": "383959a4f5258172054eacdf295d36f819b1b94e80e1abcc8ba20b226789cf48"
+    },
+    {
+      "path": "run.py",
+      "bytes": 10136,
+      "sha256": "216ffa5fb4115cb2813c37b0f3b4d991710de7296618acd79a34fedc3a680fe0"
+    },
+    {
+      "path": "SOURCES.json",
+      "bytes": 1453,
+      "sha256": "bb632bdf17ad5276fd75ffbb1eddf9e586afbceb31fedcef001fe5a669d275fc"
+    }
+  ],
+  "manifest_self_hash_excluded": true
+}
