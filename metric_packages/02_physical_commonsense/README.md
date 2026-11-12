@@ -16,6 +16,19 @@
 
 本包包含所需选取官方源码及许可证，不是完整上游仓库。`official_sources.json` 逐文件列出来源和哈希；`MANIFEST.json` 列出本包文件。Python 3.10、Torch 2.10/CUDA 12.8、Transformers 4.28.1、Accelerate 0.28.0、PEFT 0.3.0、NumPy 1.26.4、Decord 0.6.0；详见 `environment/`。这些是已知运行版本，本次没有安装复验。运行须另备完整固定 checkpoint、依赖及视频；入口使用离线模式，不自动下载。
 
+## 通过 `percept score` 调用
+
+在可运行 `percept` 的环境中，可直接调用同一入口：
+
+```bash
+percept score physical-commonsense --python /path/to/videophy-env/bin/python \
+  --input-csv /absolute/path/input.csv \
+  --checkpoint /absolute/path/videophy_2_auto \
+  --output /absolute/path/new_pc_results
+```
+
+`percept` 会在 `metric_packages/` 中定位本包 runner，并沿用相同的抽帧、输出与 tmux 检查；`--python` 指向本包环境（Python 3.10），`--dry-run` 只打印实际命令。直接运行 `python modified/sapc/run_pc.py ...` 仍可用于独立复制本包。
+
 ## 运行
 
 以下命令在 Linux GPU 主机、本指标包根目录中执行。先进入并验证持久会话，再开始安装、下载或推理：

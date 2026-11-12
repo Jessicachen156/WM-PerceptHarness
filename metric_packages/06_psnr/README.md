@@ -14,6 +14,15 @@
 
 official/ 是选取源码，不是完整可安装仓库。IQA-PyTorch固定于18dd7a19694e94aac21019170e3f5e63d6b4e19e，LingBot固定于f348dca454c8f1e5707721614dbac10fa5290fed，Wan固定于42bf4cfaa384bc21833865abc2f9e6c0e67233dc。逐文件来源及哈希见 OFFICIAL_MANIFEST.json。
 
+## 通过 `percept score` 调用
+
+```bash
+percept score psnr --manifest /data/manifests/psnr.jsonl \
+  --output-dir /data/results/psnr_source_reference_v1 --workers 3
+```
+
+`percept` 会在 `metric_packages/` 中定位 `modified/run_psnr.py`，并沿用相同的哈希、PTS 对齐和输出协议；`--python` 可指定本包的 CPU Torch 环境，`--dry-run` 只打印实际命令。直接运行 `python modified/run_psnr.py ...` 仍可用于独立复制本包。
+
 ## 环境与运行
 
 Linux、Python3.12、CPU可用的 torch==2.10.0，其余依赖见 requirements.txt。FFmpeg与ffprobe须在PATH；conditioning PNG哈希对版本/解码差异敏感，既定配置为FFmpeg4.4.2。这里不是新安装验收后的完整lockfile，不需要下载生成模型。

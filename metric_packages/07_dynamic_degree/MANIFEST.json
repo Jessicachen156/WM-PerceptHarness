@@ -52,8 +52,8 @@
     },
     {
       "path": "README.md",
-      "bytes": 2988,
-      "sha256": "4b95ca1f11c43d51b6a82284d3e97953b2fbc9b1e8e163a54a1df5a4bb866055"
+      "bytes": 3527,
+      "sha256": "f119af8633a17bc83b0e42ed150020a5678becbf877437eef639d1d471eda526"
     },
     {
       "path": "run_dynamic_degree.py",

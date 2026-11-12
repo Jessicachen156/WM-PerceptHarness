@@ -6,6 +6,16 @@
 
 **当前修改**：`modified/vbench/motion_smoothness.py` 将输入张量列表保留在 CPU，沿用官方内循环将当前帧对送到 GPU。采帧、插帧模型、尺度公式和分数公式保持不变。入口要求显式选择 `official` 或 `cpu-staging`；两种模式都传入 `torch.device('cuda')`，与官方 CLI 一致，不使用可能触发不同缩放分支的字符串 `'cuda'`。
 
+## 通过 `percept score` 调用
+
+```bash
+percept score motion-smoothness --mode cpu-staging \
+  --video /data/example.mp4 --cache-dir /data/vbench-cache \
+  --gpu 0 --output /data/results/motion_smoothness.json
+```
+
+`percept` 会在 `metric_packages/` 中定位 `run_motion_smoothness.py`，并沿用版本、源码、AMT 配置与权重哈希检查；`--mode official` 使用官方方法，`--dry-run` 只打印实际命令。已有的 `percept score motion` 是已安装 VBench CLI 路径，与本包的 hash 固定 wheel 适配器不是同一协议。
+
 ## 环境与运行
 
 需要 Linux、一个可见 CUDA GPU、Python 3.12 和兼容的 PyTorch/TorchVision。可用版本参考为 torch 2.13.0、torchvision 0.28.0、numpy 2.5.2、Pillow 11.3.0；这不是完整环境锁文件。上游完整依赖声明在 `official/pypi/vbench-0.1.5.dist-info/METADATA`，包含其他 VBench 维度的旧版本约束。准备好对应运行依赖后，安装本包 wheel，避免自动改写已有 GPU 环境：

@@ -6,6 +6,16 @@
 
 **当前修改**：`modified/vbench/dynamic_degree.py` 将解码帧张量保留在 CPU，推理时只把当前帧对送到 GPU。官方采帧间隔、RAFT 的20次迭代、阈值和评分公式保持不变。入口默认要求显式选择 `official` 或 `cpu-staging`；两种模式均采用官方 CLI 的 `torch.device('cuda')`。
 
+## 通过 `percept score` 调用
+
+```bash
+percept score dynamic-degree --mode cpu-staging \
+  --video /data/example.mp4 --cache-dir /data/vbench-cache \
+  --gpu 0 --output /data/results/dynamic_degree.json
+```
+
+`percept` 会在 `metric_packages/` 中定位 `run_dynamic_degree.py`，并沿用版本、源码与权重哈希检查；`--mode official` 使用官方方法，`--dry-run` 只打印实际命令。已有的 `percept dynamic-degree` 是官方 VBench checkout 路径，与本包的 hash 固定 wheel 适配器不是同一协议。
+
 ## 环境与运行
 
 需要 Linux、一个可见 CUDA GPU、Python 3.12 和兼容的 PyTorch/TorchVision。可用版本参考为 torch 2.13.0、torchvision 0.28.0、numpy 2.5.2、Pillow 11.3.0；这不是完整环境锁文件。上游完整依赖声明在 `official/pypi/vbench-0.1.5.dist-info/METADATA`，包含其他 VBench 维度的旧版本约束。准备好对应运行依赖后，安装本包 wheel，避免自动改写已有 GPU 环境：
