@@ -13,8 +13,6 @@ PACKAGES = ROOT / "metric_packages"
 ENTRIES = {
     "01_semantic_adherence": ["modified/sapc/run_sa.py"],
     "02_physical_commonsense": ["modified/sapc/run_pc.py"],
-    "04_object_interactions": ["run.py"],
-    "05_clipscore": ["examples/call_official.py", "modified/run_clipscore.py"],
     "06_psnr": ["modified/run_psnr.py"],
     "07_dynamic_degree": ["run_dynamic_degree.py"],
     "08_motion_smoothness": ["run_motion_smoothness.py"],

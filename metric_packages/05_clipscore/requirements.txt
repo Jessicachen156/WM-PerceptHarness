@@ -1,9 +1,0 @@
-# Install hardware-compatible torch==2.10.0 and torchvision==0.25.0 separately.
-# Historical CLIP protocol versions, not a complete fresh-install lockfile.
-numpy==2.2.6
-openai-clip==1.0.1
-decord==0.6.0
-Pillow==11.3.0
-tqdm>=4.66
-ftfy>=6
-regex

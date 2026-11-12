@@ -93,8 +93,6 @@ source bundles, not a claim that one environment can install every evaluator.
 | Package | Included upstream source | Retained license and scope |
 | --- | --- | --- |
 | SA / PC | VideoPhy-2 at `01d366c979e4a82875852adbf427ccc036e7373a` | MIT, retained in each `official/videophy/LICENSE`; model checkpoint terms remain separate |
-| Object Interactions | T2V-CompBench LLaVA subtree subset at `dd5eff7b93af0550b9efa2bdabbb21b3b017ceda` | Apache-2.0 text retained in `official/LLaVA/LICENSE`; this does not assert a license for every part of the larger CompBench repository or the 34B model |
-| CLIPScore | VBench at `fd18b3d055cb0fc6f066ca90fe2c3c8cbb698490` and selected LingBot source | Apache-2.0 upstream notices retained; nested component attribution remains in its files; OpenAI CLIP is an external MIT dependency |
 | PSNR | Selected IQA-PyTorch, Wan and LingBot source | IQA-PyTorch `LICENSE` (PolyForm Noncommercial) and `LICENSE-S-Lab` both retained; Wan/LingBot Apache-2.0 licenses retained; component attribution in PSNR source remains applicable |
 | Dynamic Degree / Motion Smoothness | Original `vbench==0.1.5` wheel, selected extracted source and optional CPU-staging adaptations | Original distribution license/metadata retained; wheel preserves its included upstream files; RAFT/AMT and checkpoint terms still apply |
 
